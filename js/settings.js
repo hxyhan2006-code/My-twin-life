@@ -2,7 +2,7 @@
 
 import { kvGet, kvSet, exportAll, importAll, wipeAll } from './db.js';
 import { chatOnce, listModels } from './api.js';
-import { getSettings } from './state.js';
+import { getSettings, FONT_SIZES, DEFAULT_FONT, saveFontSize } from './state.js';
 import { h, toast } from './ui.js';
 import { APP_VERSION } from './version.js';
 
@@ -12,6 +12,7 @@ export async function renderSettings(root, _p, ctx) {
   ctx.setTitle('ตั้งค่า');
   ctx.setRight(null);
   const s = await getSettings();
+  const fontNow = await kvGet('fontSize', DEFAULT_FONT);
   const page = h('div', { class: 'page' });
   root.append(page);
 
@@ -58,6 +59,12 @@ export async function renderSettings(root, _p, ctx) {
       dl, loadModels,
       h('div', { class: 'btns' }, test, h('button', { class: 'btn primary', onclick: async () => { await save(); toast('บันทึกแล้ว'); } }, 'บันทึก')),
     ),
+    h('h3', {}, 'ขนาดตัวอักษร'),
+    h('div', { class: 'card pad' }, h('div', { class: 'seg' }, FONT_SIZES.map(([label, px]) =>
+      h('button', { class: px === fontNow ? 'on' : '', onclick: async (e) => {
+        await saveFontSize(px);
+        e.currentTarget.parentElement.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === e.currentTarget));
+      } }, label))), h('p', { class: 'hint' }, 'ปรับแล้วเห็นผลทั้งแอพทันที')),
     h('h3', {}, 'สำรองข้อมูล'),
     h('div', { class: 'card pad' },
       h('p', { class: 'hint' }, 'ข้อมูลทั้งหมดอยู่ในมือถือเครื่องนี้ ถ้าล้างข้อมูลเบราว์เซอร์/เปลี่ยนเครื่อง จะหาย ควรสำรองบ่อยๆ ไฟล์สำรอง "ไม่มี" API key แต่มีเรื่องส่วนตัวของเรา เก็บให้ดี และห้ามเอาขึ้น GitHub'),

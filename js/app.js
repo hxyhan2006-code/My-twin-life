@@ -7,6 +7,7 @@ import { renderMe } from './me.js';
 import { renderBrain } from './brain.js';
 import { renderSettings } from './settings.js';
 import { h, iconEl, toast } from './ui.js';
+import { applyFontSize } from './state.js';
 
 const top = document.getElementById('top');
 const view = document.getElementById('view');
@@ -88,6 +89,7 @@ async function route() {
   }
 }
 
+applyFontSize();
 window.addEventListener('hashchange', route);
 if (!location.hash) location.hash = '#/chat';
 else route();

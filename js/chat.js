@@ -7,6 +7,7 @@ import { buildSystem } from './prompt.js';
 import { mdToHtml } from './md.js';
 import { extractMemories } from './profile.js';
 import { createTypewriter } from './typewriter.js';
+import { createComposer } from './composer.js';
 import { getSettings, needsSetup } from './state.js';
 import { h, toast, iconEl, popMenu, copyText, fadeTail } from './ui.js';
 
@@ -24,17 +25,17 @@ export async function renderChat(root, { id }, ctx) {
   chat = chat || { id: uid(), title: 'แชตใหม่', messages: [], createdAt: Date.now(), updatedAt: Date.now(), memorizedAt: 0, isNew: true };
 
   const list = h('div', { class: 'msgs' });
-  const input = h('textarea', { rows: 1, placeholder: 'พิมพ์คุยกับตัวเอง…', enterKeyHint: 'enter' });
-  const sendBtn = h('button', { class: 'send', title: 'ส่ง' }, iconEl('send', 'ico'));
-  root.append(list, h('div', { class: 'composer' }, h('div', { class: 'pill' }, input, sendBtn)));
+  const composer = createComposer({ placeholder: 'พิมพ์คุยกับตัวเอง…', onSubmit: (viaKey) => onSubmit(viaKey) });
+  const { input } = composer;
+  const toEnd = h('button', { class: 'toend', title: 'ไปล่างสุด', hidden: true, onclick: () => toBottom(true) }, iconEl('down'));
+  root.append(h('div', { class: 'msgwrap' }, list, toEnd), composer.el);
 
   let sending = false; // กันส่งซ้อนระหว่างรอโหลดข้อมูลก่อนเริ่มสตรีม
   let current = null; // {abort, tw} ของรอบที่กำลังตอบ
 
   const nearBottom = () => list.scrollHeight - list.scrollTop - list.clientHeight < 120;
-  const toBottom = () => { list.scrollTop = list.scrollHeight; };
-  const autosize = () => { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 160) + 'px'; };
-  input.addEventListener('input', autosize);
+  const toBottom = (smooth = false) => list.scrollTo({ top: list.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
+  list.addEventListener('scroll', () => { toEnd.hidden = list.scrollHeight - list.scrollTop - list.clientHeight < 300; }, { passive: true });
 
   // ---------- แถบบน ----------
   function setHeader() {
@@ -63,13 +64,11 @@ export async function renderChat(root, { id }, ctx) {
   const actionBtn = (icon, title, onClick, cls = '') => h('button', { class: `act ${cls}`, title, onclick: onClick }, iconEl(icon));
 
   function userBubble(m) {
-    const b = h('div', { class: 'bub' }, m.content);
-    const wrap = h('div', { class: 'msg user' }, b);
-    b.addEventListener('click', () => popMenu(b, [
-      { label: 'คัดลอก', icon: 'copy', onClick: () => copyText(m.content) },
-      { label: 'แก้ไขข้อความ', icon: 'pencil', onClick: () => editUser(m, wrap) },
-    ]));
-    return wrap;
+    const wrap = h('div', { class: 'msg user' }, h('div', { class: 'bub' }, m.content));
+    const acts = h('div', { class: 'actions right' },
+      actionBtn('copy', 'คัดลอก', () => copyText(m.content)),
+      actionBtn('pencil', 'แก้ไขข้อความ', () => editUser(m, wrap)));
+    return h('div', { class: 'umsg' }, wrap, acts);
   }
 
   function aiBubble(m, { retry = false } = {}) {
@@ -94,9 +93,10 @@ export async function renderChat(root, { id }, ctx) {
 
   function editUser(m, wrap) {
     if (sending) return toast('รอให้ตอบเสร็จก่อน');
+    const holder = wrap.parentElement;
     const ta = h('textarea', { class: 'big', rows: 3, value: m.content });
     const box = h('div', { class: 'msg user' }, h('div', { class: 'editbox' }, ta, h('div', { class: 'btns small' },
-      h('button', { class: 'link', onclick: () => box.replaceWith(wrap) }, 'ยกเลิก'),
+      h('button', { class: 'link', onclick: () => box.replaceWith(holder) }, 'ยกเลิก'),
       h('button', { class: 'link', onclick: () => {
         const t = ta.value.trim();
         if (!t) return;
@@ -104,7 +104,7 @@ export async function renderChat(root, { id }, ctx) {
         renderMessages();
         send(t);
       } }, 'ส่งใหม่'))));
-    wrap.replaceWith(box);
+    holder.replaceWith(box);
     ta.focus();
   }
 
@@ -120,17 +120,10 @@ export async function renderChat(root, { id }, ctx) {
     }
     box.append(h('h2', {}, 'เริ่มจากไหนดี'));
     for (const [emoji, text] of STARTERS) {
-      box.append(h('button', { class: 'starter', onclick: () => { input.value = text + ' '; input.focus(); autosize(); } }, h('span', {}, emoji), text));
+      box.append(h('button', { class: 'starter', onclick: () => { input.value = text + ' '; input.focus(); composer.autosize(); } }, h('span', {}, emoji), text));
     }
     list.append(box);
   }
-
-  const setBusy = (busy) => {
-    sendBtn.innerHTML = '';
-    sendBtn.append(iconEl(busy ? 'stop' : 'send', 'ico'));
-    sendBtn.title = busy ? 'หยุด' : 'ส่ง';
-    sendBtn.classList.toggle('busy', busy);
-  };
 
   async function memorize(s, mems) {
     const userCount = chat.messages.filter((m) => m.role === 'user').length;
@@ -149,12 +142,12 @@ export async function renderChat(root, { id }, ctx) {
   async function run(text) {
     if (sending) return;
     sending = true;
-    setBusy(true);
+    composer.setBusy(true);
     try {
       await turn(text);
     } finally {
       sending = false;
-      setBusy(false);
+      composer.setBusy(false);
       current = null;
     }
   }
@@ -179,8 +172,7 @@ export async function renderChat(root, { id }, ctx) {
       chat.messages.push({ role: 'user', content: text, ts: Date.now() });
       if (chat.title === 'แชตใหม่') chat.title = text.slice(0, 40);
       list.append(userBubble(chat.messages.at(-1)));
-      input.value = '';
-      autosize();
+      composer.clear();
     }
     list.querySelectorAll('.act-retry').forEach((x) => x.remove());
     setHeader();
@@ -213,7 +205,7 @@ export async function renderChat(root, { id }, ctx) {
       },
     });
     current = { abort: new AbortController(), tw };
-    setBusy(true);
+    composer.setBusy(true);
 
     let err = '';
     try {
@@ -247,19 +239,16 @@ export async function renderChat(root, { id }, ctx) {
     if (!err) memorize(s, mems);
   }
 
-  sendBtn.addEventListener('click', () => {
-    if (current) { current.abort.abort(); current.tw.flush(); return; }
-    if (sending) return;
-    const t = input.value.trim();
-    if (t) send(t);
-  });
-  input.addEventListener('keydown', (e) => {
-    // บนมือถือ Enter = ขึ้นบรรทัดใหม่ · บนคอมกด Enter ส่ง (Shift+Enter ขึ้นบรรทัด)
-    if (e.key === 'Enter' && !e.shiftKey && matchMedia('(hover: hover)').matches) {
-      e.preventDefault();
-      if (!sending && input.value.trim()) send(input.value.trim());
+  function onSubmit(viaKey) {
+    if (current) {
+      if (viaKey) return;
+      current.abort.abort();
+      current.tw.flush();
+      return;
     }
-  });
+    const t = input.value.trim();
+    if (!sending && t) send(t);
+  }
 
   setHeader();
   if (chat.messages.length) renderMessages();

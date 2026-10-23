@@ -1,9 +1,9 @@
-// หน้าสัมภาษณ์: เลือกหมวด → ตอบทีละข้อ (เซฟทันทีทุกข้อ) · AI ถามเจาะลึกต่อได้
+// หน้าสัมภาษณ์: เลือกหมวด → คุยถามตอบทีละข้อแบบแชต (เซฟทันทีทุกข้อ) · AI ถามเจาะลึกต่อได้
 
 import { getAll, put, kvGet, kvSet, uid } from './db.js';
-import { answerRow } from './rows.js';
-import { CATEGORIES, BASE_QUESTIONS, categoryById } from './questions.js';
+import { CATEGORIES, BASE_QUESTIONS, categoryById, groupOfCat } from './questions.js';
 import { followUps } from './profile.js';
+import { createComposer } from './composer.js';
 import { getSettings, needsSetup } from './state.js';
 import { h, toast, iconEl } from './ui.js';
 
@@ -25,105 +25,141 @@ export async function renderInterview(root, { cat }, ctx) {
   if (!cat) return renderCategories(root, data, ctx);
   const c = categoryById(cat);
   if (!c) return ctx.go('#/interview');
-  return renderQuestion(root, c, ctx);
+  return renderThread(root, c, ctx);
 }
 
 function renderCategories(root, data, ctx) {
   ctx.setTitle('สัมภาษณ์');
   ctx.setRight(null);
   const page = h('div', { class: 'page' });
-  page.append(h('p', { class: 'hint' }, 'ตอบทีละข้อ ยิ่งละเอียดและตรงยิ่งทำให้ twin เหมือนเรา ทุกคำตอบเซฟทันที หยุดแล้วกลับมาต่อได้ ข้ามข้อที่ไม่อยากตอบได้'));
+  page.append(h('p', { class: 'hint' }, 'เลือกหมวดแล้วคุยตอบทีละข้อ ยิ่งละเอียดและตรงยิ่งทำให้ twin เหมือนเรา ทุกคำตอบเซฟทันที หยุดแล้วกลับมาต่อได้ ข้ามข้อที่ไม่อยากตอบได้'));
   const card = h('div', { class: 'card' });
   for (const c of CATEGORIES) {
-    const total = BASE_QUESTIONS.filter((q) => q.category === c.id).length;
     const answered = data.answers.filter((a) => a.category === c.id).length;
     const left = queueFor(c.id, data).length;
+    const pct = answered + left ? Math.round((answered / (answered + left)) * 100) : 100;
     card.append(
       h('a', { class: 'row', href: `#/interview/${c.id}` },
         h('span', { class: 'emoji' }, c.emoji),
-        h('span', { class: 'grow' }, h('b', {}, c.name), h('small', {}, `ตอบแล้ว ${answered} ข้อ · เหลือ ${left} ข้อ ในคิว (พื้นฐานทั้งหมด ${total})`)),
+        h('span', { class: 'grow' }, h('b', {}, c.name),
+          h('small', {}, left ? `ตอบแล้ว ${answered} · เหลือ ${left} ข้อ` : `ตอบครบแล้ว (${answered} ข้อ)`),
+          h('span', { class: 'bar' }, h('i', { style: `width:${pct}%` }))),
         iconEl('chevron')),
     );
   }
-  page.append(card);
-  page.append(h('p', { class: 'hint' }, `รวมตอบแล้ว ${data.answers.length} ข้อ · พอตอบพอสมควรแล้ว ไปที่ "ความจำ" เพื่อสร้างแก่นตัวตน`));
+  page.append(card, h('p', { class: 'hint' }, `รวมตอบแล้ว ${data.answers.length} ข้อ · พอตอบพอสมควรแล้ว ไปที่ "แก่นตัวตน" ในหน้าโปรไฟล์เพื่อสร้างตัวตนหลัก`));
   root.append(page);
 }
 
-async function renderQuestion(root, c, ctx) {
-  ctx.setTitle(c.name);
-  ctx.setRight(null);
-  const page = h('div', { class: 'page' });
-  root.append(page);
+const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  async function show() {
-    page.innerHTML = '';
-    const data = await load();
-    const queue = queueFor(c.id, data);
-    const skippedHere = BASE_QUESTIONS.filter((q) => q.category === c.id && data.skipped.has(q.id));
-    const answeredList = data.answers.filter((a) => a.category === c.id).sort((a, b) => b.updatedAt - a.updatedAt);
+async function renderThread(root, c, ctx) {
+  ctx.setTitle(`${c.emoji} ${c.name}`);
+  const list = h('div', { class: 'msgs' });
+  const chipSkip = h('button', { class: 'chip', onclick: () => skip() }, 'ข้ามข้อนี้');
+  const chipDeep = h('button', { class: 'chip', onclick: () => deeper() }, '✨ เจาะลึกต่อ');
+  const chipAuto = h('button', { class: 'chip', onclick: () => toggleAuto() });
+  const composer = createComposer({ placeholder: 'พิมพ์คำตอบ…', onSubmit: () => submit() });
+  root.append(list, h('div', { class: 'chips' }, chipSkip, chipDeep, chipAuto), composer.el);
 
-    if (!queue.length) {
-      page.append(h('div', { class: 'card pad' }, h('b', {}, 'หมวดนี้ตอบครบแล้ว 🎉'), h('p', { class: 'hint' }, 'ถ้าอยากให้ละเอียดขึ้น เปิดดูคำตอบเดิมด้านล่างแล้วกด "ถามเจาะลึก" ได้')));
-    } else {
-      const q = queue[0];
-      const ta = h('textarea', { class: 'big', rows: 5, placeholder: 'พิมพ์คำตอบ… ยิ่งละเอียดยิ่งดี' });
-      const status = h('small', { class: 'hint' }, `ข้อนี้เป็น 1 ใน ${queue.length} ข้อที่เหลือ${q.parent ? ' (AI ถามเจาะลึก)' : ''}`);
-      const save = async (andFollow) => {
-        const text = ta.value.trim();
-        if (!text) return toast('ยังไม่ได้พิมพ์คำตอบ');
-        const rec = { id: uid(), qid: q.id, category: c.id, question: q.question, answer: text, createdAt: Date.now(), updatedAt: Date.now() };
-        await put('answers', rec);
-        await kvSet('followups', data.followups.filter((f) => f.id !== q.id));
-        if (andFollow) await askFollow(rec);
-        toast('บันทึกแล้ว');
-        show();
-      };
-      page.append(
-        h('div', { class: 'qcard' }, h('p', { class: 'q' }, q.question), ta, status),
-        h('div', { class: 'btns' },
-          h('button', { class: 'btn ghost', onclick: async () => {
-            if (q.parent) await kvSet('followups', data.followups.filter((f) => f.id !== q.id));
-            else await kvSet('skipped', [...data.skipped, q.id]);
-            show();
-          } }, 'ข้าม'),
-          h('button', { class: 'btn ghost', onclick: () => save(true) }, 'บันทึก + ถามเจาะลึก'),
-          h('button', { class: 'btn primary', onclick: () => save(false) }, 'บันทึก')),
-      );
-    }
+  let data = await load();
+  let q = null; // คำถามที่กำลังรอคำตอบ
+  let last = null; // คำตอบล่าสุดของรอบนี้ (ไว้ถามเจาะลึกต่อ)
+  let busy = false;
+  let auto = await kvGet('autoFollow', true);
+  let warned = false;
 
-    if (skippedHere.length) {
-      page.append(h('button', { class: 'link', onclick: async () => {
-        const ids = new Set(skippedHere.map((q) => q.id));
-        await kvSet('skipped', [...data.skipped].filter((id) => !ids.has(id)));
-        show();
-      } }, `เอาคำถามที่ข้ามไว้ (${skippedHere.length}) กลับมา`));
-    }
+  const toBottom = () => { list.scrollTop = list.scrollHeight; };
+  const paintAuto = () => { chipAuto.textContent = `ถามต่อเอง: ${auto ? 'เปิด' : 'ปิด'}`; chipAuto.classList.toggle('on', auto); };
+  const toggleAuto = async () => { auto = !auto; await kvSet('autoFollow', auto); paintAuto(); };
+  paintAuto();
 
-    if (answeredList.length) {
-      page.append(h('h3', {}, `คำตอบของหมวดนี้ (${answeredList.length})`));
-      const card = h('div', { class: 'card' });
-      for (const a of answeredList) {
-        card.append(answerRow(a, { onChange: show, extra: [{ label: 'ถามเจาะลึก', onClick: async (x) => { await askFollow(x); show(); } }] }));
-      }
-      page.append(card);
-    }
+  const say = (kids, cls = '') => { const el = h('div', { class: `msg ai in ${cls}` }, kids); list.append(el); toBottom(); return el; };
+  const mine = (text) => { list.append(h('div', { class: 'msg user in' }, h('div', { class: 'bub' }, text))); toBottom(); };
+
+  function paintHeader() {
+    const n = data.answers.filter((a) => a.category === c.id).length;
+    ctx.setRight(h('a', { class: 'chip', href: `#/brain/${groupOfCat(c.id)}` }, `ตอบแล้ว ${n} · ดู/แก้`));
   }
 
-  async function askFollow(rec) {
+  async function next() {
+    data = await load();
+    paintHeader();
+    const queue = queueFor(c.id, data);
+    if (!queue.length) {
+      q = null;
+      const nextCat = CATEGORIES.find((x) => x.id !== c.id && queueFor(x.id, data).length);
+      say([
+        h('div', { class: 'md' }, h('p', {}, '🎉 หมวดนี้ตอบครบแล้ว')),
+        h('div', { class: 'btns left' },
+          nextCat && h('a', { class: 'btn primary', href: `#/interview/${nextCat.id}` }, `ไปหมวด ${nextCat.name}`),
+          h('a', { class: 'btn', href: `#/brain/${groupOfCat(c.id)}` }, 'ดู/แก้คำตอบ')),
+      ]);
+      return;
+    }
+    q = queue[0];
+    const dots = say(h('div', { class: 'md' }, h('span', { class: 'pulse' })));
+    await pause(380);
+    dots.replaceWith(h('div', { class: 'msg ai in qmsg' },
+      h('small', { class: 'qno' }, q.parent ? '✨ ถามเจาะลึก' : `ข้อที่ ${data.answers.filter((a) => a.category === c.id).length + 1} · เหลือ ${queue.length} ข้อ`),
+      h('div', { class: 'md' }, h('p', {}, q.question))));
+    toBottom();
+    composer.input.focus();
+  }
+
+  async function ask(rec, n) {
     const s = await getSettings();
     const warn = needsSetup(s);
-    if (warn) return toast(`${warn} ข้ามการถามเจาะลึก`);
-    toast('AI กำลังคิดคำถามต่อ…', 8000);
+    if (warn) {
+      if (!warned) toast(`${warn} จึงถามเจาะลึกไม่ได้`);
+      warned = true;
+      return;
+    }
     try {
-      const qs = await followUps({ question: rec.question, answer: rec.answer, apiKey: s.apiKey, model: s.lightModel, name: s.userName });
+      const qs = await followUps({ question: rec.question, answer: rec.answer, apiKey: s.apiKey, model: s.lightModel, name: s.userName, n });
       const cur = await kvGet('followups', []);
-      const add = qs.map((question) => ({ id: 'fu-' + uid(), category: rec.category, question, parent: rec.id }));
-      await kvSet('followups', [...add, ...cur]);
+      await kvSet('followups', [...qs.map((question) => ({ id: 'fu-' + uid(), category: rec.category, question, parent: rec.id })), ...cur]);
     } catch (e) {
       toast(e.message, 4000);
     }
   }
 
-  await show();
+  async function submit() {
+    const text = composer.input.value.trim();
+    if (!q || busy || !text) return;
+    busy = true;
+    const rec = { id: uid(), qid: q.id, category: c.id, question: q.question, answer: text, createdAt: Date.now(), updatedAt: Date.now() };
+    await put('answers', rec);
+    if (q.parent) await kvSet('followups', (await kvGet('followups', [])).filter((f) => f.id !== q.id));
+    mine(text);
+    composer.clear();
+    last = rec;
+    if (auto && !q.parent) await ask(rec, 1); // เจาะลึกอัตโนมัติเฉพาะข้อพื้นฐาน ไม่ไล่ลึกไม่รู้จบ
+    await next();
+    busy = false;
+  }
+
+  async function skip() {
+    if (!q || busy) return;
+    busy = true;
+    if (q.parent) await kvSet('followups', (await kvGet('followups', [])).filter((f) => f.id !== q.id));
+    else await kvSet('skipped', [...new Set([...(await kvGet('skipped', [])), q.id])]);
+    say(h('small', { class: 'dim' }, 'ข้ามข้อนี้'));
+    await next();
+    busy = false;
+  }
+
+  async function deeper() {
+    if (!last) return toast('ตอบสักข้อก่อน แล้วค่อยให้ AI เจาะลึกต่อ');
+    if (busy) return;
+    busy = true;
+    const dots = say(h('div', { class: 'md' }, h('span', { class: 'pulse' })));
+    await ask(last, 2);
+    dots.remove();
+    await next();
+    busy = false;
+  }
+
+  say(h('small', { class: 'dim' }, 'ตอบทีละข้อ พิมพ์เท่าที่อยากเล่า ข้ามได้ ถ้าอยากเล่าเพิ่มเติมกด "✨ เจาะลึกต่อ"'));
+  await next();
 }

@@ -30,13 +30,14 @@ export function toast(msg, ms = 2600) {
 }
 
 const svg = (d) =>
-  `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+  `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
 export const icons = {
   menu: svg('<path d="M4 9h16M4 15h10"/>'),
   newChat: svg('<path d="M12 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-6"/><path d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4z"/>'),
-  pencil: svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>'),
-  copy: svg('<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 012-2h9"/>'),
-  retry: svg('<path d="M20 11a8 8 0 10-2.3 5.7"/><path d="M20 4v7h-7"/>'),
+  pencil: svg('<path d="M17 3a2.85 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5z"/>'),
+  copy: svg('<rect x="8" y="8" width="14" height="14" rx="3"/><path d="M4 16c-1.1 0-2-.9-2-2V5a3 3 0 013-3h9c1.1 0 2 .9 2 2"/>'),
+  retry: svg('<path d="M21 12a9 9 0 01-15.5 6.2L3 16"/><path d="M3 12A9 9 0 0118.5 5.8L21 8"/><path d="M21 3v5h-5"/><path d="M3 21v-5h5"/>'),
+  down: svg('<path d="M12 5v14M5 12l7 7 7-7"/>'),
   dots: svg('<circle cx="12" cy="5" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="12" cy="19" r="1.3" fill="currentColor"/>'),
   back: svg('<path d="M15 18l-6-6 6-6"/>'),
   send: svg('<path d="M12 19V5M5 12l7-7 7 7"/>'),
