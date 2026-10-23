@@ -44,11 +44,23 @@ export function buildInterviewerSystem({ name, callName, selfName, cat, seeds, k
 const arr = (v) => (Array.isArray(v) ? v : []);
 const clean = (s) => String(s ?? '').trim();
 
-// อ่านคำตอบของผู้สัมภาษณ์ ทนต่อรูปแบบเพี้ยน: ถ้าไม่ใช่ JSON ใช้ข้อความดิบเป็นคำถาม
+// ดึงค่าข้อความ "key":"..." ที่ปิดเครื่องหมายคำพูดแล้ว จาก JSON ที่ถูกตัดกลางคัน
+const field = (t, k) => {
+  const m = String(t).match(new RegExp(`"${k}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`));
+  return m ? m[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').trim() : '';
+};
+
+// อ่านคำตอบของผู้สัมภาษณ์ ทนต่อรูปแบบเพี้ยน
+// - JSON สมบูรณ์ → ใช้ตามนั้น · JSON ขาดกลางคัน → กู้ reflect/question ที่ปิดแล้ว · ถ้ากู้คำถามไม่ได้ → incomplete (ห้ามเอาไปโชว์)
+// - ข้อความธรรมดาไม่มีวงเล็บ JSON → ใช้เป็นคำถามได้
 export function parseInterviewerReply(text) {
   const j = extractJson(text);
   if (!j || Array.isArray(j) || typeof j !== 'object') {
-    return { reflect: '', facts: [], move: 'switch', question: clean(text), choices: [], done: false, raw: true };
+    const t = clean(text);
+    const looksJson = /[{}]|```|"(reflect|question|facts|move)"/.test(t);
+    if (!looksJson) return { reflect: '', facts: [], move: 'switch', question: t, choices: [], done: false, raw: true, incomplete: false };
+    const question = field(t, 'question');
+    return { reflect: field(t, 'reflect'), facts: [], move: 'switch', question, choices: [], done: false, raw: true, incomplete: !question };
   }
   return {
     reflect: clean(j.reflect),
@@ -58,6 +70,7 @@ export function parseInterviewerReply(text) {
     choices: arr(j.choices).map(clean).filter((c) => c && c.length <= 60).slice(0, 4),
     done: j.topic_done === true,
     raw: false,
+    incomplete: false,
   };
 }
 
@@ -85,6 +98,10 @@ export async function interviewTurn({ settings, cat, answers, memories, seeds, c
   }
   if (mode === 'skip') messages.push({ role: 'user', content: SKIP });
   if (mode === 'wrap') messages.push({ role: 'user', content: WRAP });
-  const out = await chatOnce({ apiKey: settings.apiKey, model: settings.model, messages, temperature: 0.8, maxTokens: 700, signal });
-  return parseInterviewerReply(out);
+  // โมเดลแนวคิดก่อนตอบ (เช่น Gemini) ใช้โควตาไปกับการคิด จึงเผื่อความยาวไว้เยอะ และสั่งให้คิดน้อยเพื่อให้ตอบเร็ว
+  const ask = (maxTokens) => chatOnce({ apiKey: settings.apiKey, model: settings.model, messages, temperature: 0.8, maxTokens, signal, extra: { reasoning: { effort: 'low' } } });
+  let reply = parseInterviewerReply(await ask(3000));
+  if (reply.incomplete) reply = parseInterviewerReply(await ask(6000)); // ตอบขาด → ลองใหม่อีกครั้งด้วยโควตาที่ใหญ่ขึ้น
+  if (reply.incomplete) throw new Error('AI ตอบไม่ครบ ลองใหม่อีกครั้ง หรือเปลี่ยนโมเดลหลักในตั้งค่า');
+  return reply;
 }

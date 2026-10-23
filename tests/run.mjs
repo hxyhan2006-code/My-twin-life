@@ -145,4 +145,16 @@ t('usage: รวมยอดวัน/เดือน, ระดับงบ, �
   assert.equal(fmtThb(0.24, 33), '7.9 บาท');
 });
 
+t('parseInterviewerReply: JSON ถูกตัดกลางคัน → กู้ที่ปิดแล้ว/ไม่โชว์ JSON ดิบ', () => {
+  const full = parseInterviewerReply('```json\n{\n  "reflect": "ดีใจที่ได้นั่งคุยกัน",\n  "facts": [],\n  "move": "warmup",\n  "question": "ตอนนี้ทำอะไรอยู่?",\n  "choices": ["เรียน"');
+  assert.equal(full.question, 'ตอนนี้ทำอะไรอยู่?');
+  assert.equal(full.reflect, 'ดีใจที่ได้นั่งคุยกัน');
+  assert.equal(full.incomplete, false);
+  const cut = parseInterviewerReply('```json\n{\n  "reflect": "ดีใจที่ได้มานั่งคุยกันแบบนี้นะ Ha');
+  assert.equal(cut.incomplete, true);
+  assert.equal(cut.question, '');
+  assert.equal(parseInterviewerReply('{"question":"ข้อเดียว"}').incomplete, false);
+  assert.equal(parseInterviewerReply('ถามธรรมดาไม่มี json').incomplete, false);
+});
+
 console.log(`\nผ่านทั้งหมด ${n} ข้อ`);

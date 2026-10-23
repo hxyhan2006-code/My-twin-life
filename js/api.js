@@ -47,8 +47,9 @@ async function post(body, apiKey, signal) {
 }
 
 // ถามครั้งเดียว ได้ข้อความกลับมาทั้งก้อน (ใช้กับงานสรุป/ดึงความจำ)
-export async function chatOnce({ apiKey, model, messages, temperature = 0.4, maxTokens, signal }) {
-  const res = await post({ model, messages, temperature, usage: { include: true }, ...(maxTokens && { max_tokens: maxTokens }) }, apiKey, signal);
+// extra = พารามิเตอร์เสริมของ OpenRouter เช่น { reasoning: { effort: 'low' } } (โมเดลที่ไม่รองรับจะข้ามไปเอง)
+export async function chatOnce({ apiKey, model, messages, temperature = 0.4, maxTokens, signal, extra = {} }) {
+  const res = await post({ model, messages, temperature, usage: { include: true }, ...(maxTokens && { max_tokens: maxTokens }), ...extra }, apiKey, signal);
   const j = await res.json();
   if (j.error) throw new Error(j.error.message || 'โมเดลตอบกลับผิดพลาด');
   usageSink?.(model, j.usage);
