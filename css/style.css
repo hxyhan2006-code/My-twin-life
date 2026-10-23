@@ -185,3 +185,19 @@ textarea.big { resize: none; }
 .row { padding: 16px; }
 .round { width: 46px; height: 46px; }
 .round.flat { width: 44px; }
+
+/* ---- ค่าใช้จ่าย AI ---- */
+.row.between { justify-content: space-between; }
+.usd { font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; font-weight: 700; padding: 8px 16px; border-radius: 22px; background: #12281c; color: #4ade80; font-size: .95em; white-space: nowrap; }
+.usd.warn { background: #2e2410; color: #fbbf24; }
+.usd.over { background: #321616; color: #f87171; }
+.trio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 6px 0; }
+.trio label { display: flex; flex-direction: column; gap: 4px; }
+.trio input { width: 100%; background: var(--pill); color: var(--text); border: 1px solid transparent; border-radius: 12px; padding: 10px; font: inherit; outline: none; }
+.trio input:focus { border-color: var(--accent); }
+.noted { margin: 6px 0 10px; padding: 10px 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); font-size: .88em; color: var(--dim); }
+.noted .nt { display: flex; align-items: center; gap: 6px; color: #8fd19e; margin-bottom: 4px; }
+.noted .nt svg { width: 16px; height: 16px; }
+.noted button { display: block; text-align: left; width: 100%; background: none; border: 0; color: var(--text); padding: 4px 0; font: inherit; }
+.reflect { color: var(--dim); }
+.chip.ghost { color: var(--dim); }

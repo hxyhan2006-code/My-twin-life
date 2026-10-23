@@ -69,21 +69,7 @@ export async function buildCore({ answers, apiKey, model, name, onProgress = () 
   );
 }
 
-// ให้ AI คิดคำถามต่อจากคำตอบ
-export async function followUps({ question, answer, apiKey, model, name, n = 3 }) {
-  const out = await chatOnce({
-    apiKey, model, temperature: 0.7,
-    messages: [
-      { role: 'system', content: `คุณกำลังสัมภาษณ์ ${name} เพื่อรู้จักเขาลึกๆ ให้คิดคำถามต่อ ${n} ข้อ เจาะรายละเอียด ที่มา ความรู้สึก หรือตัวอย่างจริงจากคำตอบ ภาษาไทยพูดกันเอง สั้น ตอบเป็น JSON array ของข้อความเท่านั้น` },
-      { role: 'user', content: `คำถาม: ${question}\nคำตอบ: ${answer}` },
-    ],
-  });
-  const arr = extractJson(out);
-  if (!Array.isArray(arr)) throw new Error('AI ตอบรูปแบบที่อ่านไม่ได้ ลองกดอีกครั้ง');
-  return arr.map((s) => String(s).trim()).filter(Boolean).slice(0, n);
-}
-
-const sameish = (a, b) => {
+export const sameish = (a, b) => {
   const ga = grams(a);
   const gb = grams(b);
   if (!ga.size || !gb.size) return false;

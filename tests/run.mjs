@@ -5,6 +5,8 @@ import { buildSystem, extractJson } from '../js/prompt.js';
 import { mdToHtml } from '../js/md.js';
 import { BASE_QUESTIONS, CATEGORIES, GROUPS, groupOfCat } from '../js/questions.js';
 import { createTypewriter } from '../js/typewriter.js';
+import { buildInterviewerSystem, parseInterviewerReply } from '../js/interviewer.js';
+import { summarize, addToDays, levelOf, costOf, fmtUsd, fmtThb, dayKey } from '../js/usage.js';
 import { normalizeMemories } from '../js/profile.js';
 
 let n = 0;
@@ -102,6 +104,45 @@ t('typewriter เผยทีละนิดจนครบ ไม่ตัด�
   const tw2 = createTypewriter({ onFrame: (x) => f2.push(x), raf: () => 1, caf: () => {} });
   tw2.push('abc'); tw2.flush();
   assert.equal(f2.at(-1), 'abc');
+});
+
+t('ผู้สัมภาษณ์: system prompt มีหลักสำคัญ + ประเด็น + สิ่งที่รู้แล้ว + เตือนสรุปทุก 8 ข้อ', () => {
+  const cat = { id: 'work', name: 'เรียนและงาน' };
+  const p = buildInterviewerSystem({ name: 'Han', callName: 'ฮาน', selfName: 'เรา', cat, seeds: ['ถามเรื่องงาน'], known: ['- ถาม: ก ตอบ: ข'], facts: ['เป็นโปรแกรมเมอร์'], core: 'ตัวตน', turns: 8 });
+  for (const k of ['ทีละ 1 ข้อ', 'สะท้อน', 'ฉากจริง', 'ก็โอเค', 'ห้ามสอน', '1323', 'เรียนและงาน', 'ถามเรื่องงาน', 'เป็นโปรแกรมเมอร์', 'move=summary', 'ฮาน']) assert.ok(p.includes(k), k);
+  assert.ok(!buildInterviewerSystem({ name: 'Han', callName: 'ฮาน', selfName: 'เรา', cat, seeds: [], known: [], facts: [], core: '', turns: 3 }).includes('move=summary):'), 'ยังไม่ถึงเวลาสรุป');
+});
+
+t('parseInterviewerReply อ่าน JSON/ห่อ ``` ได้ จำกัดจำนวน และทนข้อความดิบ', () => {
+  const r = parseInterviewerReply('```json\n{"reflect":"ฟังแล้วเหมือนเหงา","facts":["a","b","c","d"],"move":"example","question":"คืนนั้นทำอะไร","choices":["โล่ง","เหงา","ก","ข","ค"],"topic_done":false}\n```');
+  assert.equal(r.question, 'คืนนั้นทำอะไร');
+  assert.equal(r.facts.length, 3);
+  assert.equal(r.choices.length, 4);
+  assert.equal(r.move, 'example');
+  assert.equal(parseInterviewerReply('{"question":"x","move":"มั่ว"}').move, 'switch');
+  const raw = parseInterviewerReply('ถามอะไรสักอย่างเหรอ');
+  assert.equal(raw.question, 'ถามอะไรสักอย่างเหรอ');
+  assert.ok(raw.raw);
+  assert.equal(parseInterviewerReply('{"question":"จบ","topic_done":true}').done, true);
+});
+
+t('usage: รวมยอดวัน/เดือน, ระดับงบ, ราคา, รูปแบบตัวเลข', () => {
+  const now = new Date(2026, 9, 23, 12);
+  let days = {};
+  days = addToDays(days, '2026-10-23', { usd: 0.1, input: 100, output: 50 }, now);
+  days = addToDays(days, '2026-10-23', { usd: 0.05, input: 10, output: 5 }, now);
+  days = addToDays(days, '2026-10-02', { usd: 0.2 }, now);
+  days = addToDays(days, '2026-09-30', { usd: 9 }, now);
+  const s = summarize(days, now);
+  assert.ok(Math.abs(s.day.usd - 0.15) < 1e-9 && s.day.n === 2 && s.day.input === 110);
+  assert.ok(Math.abs(s.month.usd - 0.35) < 1e-9, 'เดือนนี้ไม่นับเดือนก่อน');
+  assert.equal(dayKey(now), '2026-10-23');
+  assert.equal(levelOf(0.5, 1), 'ok'); assert.equal(levelOf(0.8, 1), 'warn'); assert.equal(levelOf(1, 1), 'over'); assert.equal(levelOf(5, 0), 'ok');
+  assert.deepEqual(costOf({ cost: 0.01, prompt_tokens: 5, completion_tokens: 6 }, null), { usd: 0.01, input: 5, output: 6, unknown: 0 });
+  assert.ok(Math.abs(costOf({ prompt_tokens: 1000, completion_tokens: 100 }, [0.000001, 0.000002]).usd - 0.0012) < 1e-12);
+  assert.equal(costOf({ prompt_tokens: 10, completion_tokens: 1 }, null).unknown, 1);
+  assert.equal(fmtUsd(0), '$0.00'); assert.equal(fmtUsd(0.24), '$0.24'); assert.equal(fmtUsd(0.0004), '$0.0004');
+  assert.equal(fmtThb(0.24, 33), '7.9 บาท');
 });
 
 console.log(`\nผ่านทั้งหมด ${n} ข้อ`);

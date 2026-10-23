@@ -5,6 +5,7 @@ import { chatOnce, listModels } from './api.js';
 import { getSettings, FONT_SIZES, DEFAULT_FONT, saveFontSize } from './state.js';
 import { h, toast } from './ui.js';
 import { APP_VERSION } from './version.js';
+import { loadSummary, levelOf, fmtUsd, fmtThb } from './usage.js';
 
 const field = (label, input, note) => h('label', { class: 'field' }, h('span', {}, label), input, note && h('small', {}, note));
 
@@ -23,12 +24,17 @@ export async function renderSettings(root, _p, ctx) {
   const model = h('input', { value: s.model, list: 'models', placeholder: 'เช่น provider/model-name', autocomplete: 'off', autocapitalize: 'off', spellcheck: false });
   const light = h('input', { value: (await kvGet('lightModel', '')) || '', list: 'models', placeholder: 'ว่างไว้ = ใช้ตัวเดียวกับด้านบน', autocomplete: 'off', autocapitalize: 'off', spellcheck: false });
 
+  const callName = h('input', { value: s.callName, placeholder: `เช่น ${s.userName}`, autocomplete: 'off' });
+  const selfName = h('input', { value: s.selfName, placeholder: 'เช่น เรา / ผม', autocomplete: 'off' });
+
   const loadModels = h('button', { class: 'btn ghost', type: 'button', onclick: async () => {
     try {
-      const ids = await listModels();
+      const list = await listModels();
       dl.innerHTML = '';
-      for (const id of ids) dl.append(h('option', { value: id }));
-      toast(`โหลดรายชื่อโมเดล ${ids.length} ตัว พิมพ์ค้นหาในช่องโมเดลได้`);
+      for (const m of list) dl.append(h('option', { value: m.id }));
+      // เก็บราคาต่อโทเคนไว้คำนวณค่าใช้จ่าย เผื่อ OpenRouter ไม่ส่งยอดมาให้
+      await kvSet('pricing', Object.fromEntries(list.filter((m) => Number.isFinite(m.price[0]) && Number.isFinite(m.price[1])).map((m) => [m.id, m.price])));
+      toast(`โหลดรายชื่อโมเดล ${list.length} ตัว พิมพ์ค้นหาในช่องโมเดลได้`);
     } catch (e) { toast(e.message); }
   } }, 'โหลดรายชื่อโมเดลทั้งหมด');
 
@@ -37,6 +43,8 @@ export async function renderSettings(root, _p, ctx) {
     await kvSet('apiKey', key.value.trim());
     await kvSet('model', model.value.trim());
     await kvSet('lightModel', light.value.trim());
+    await kvSet('callName', callName.value.trim());
+    await kvSet('selfName', selfName.value.trim());
   };
   const test = h('button', { class: 'btn ghost', onclick: async () => {
     await save();
@@ -50,12 +58,17 @@ export async function renderSettings(root, _p, ctx) {
   } }, 'ทดสอบการเชื่อมต่อ');
 
   page.append(
+    h('h3', {}, 'AI'),
+    await usageCard(),
+    h('h3', {}, 'การเชื่อมต่อ'),
     h('div', { class: 'card pad' },
       field('ชื่อของเรา', name, 'twin จะใช้ชื่อนี้เวลาเป็นเรา'),
       field('OpenRouter API key', key, 'เก็บในมือถือเครื่องนี้เท่านั้น ไม่ถูกส่งไปที่อื่นนอกจาก OpenRouter · แนะนำตั้งวงเงินที่ openrouter.ai'),
       showKey,
-      field('โมเดลหลัก (ใช้คุยกับ twin และสร้างแก่นตัวตน)', model, 'เลือกตัวที่ฉลาดที่สุดที่ยอมจ่ายไหว ลองสลับดูได้'),
-      field('โมเดลเบา (ใช้ดึงความจำ / คิดคำถามเจาะลึก)', light, 'ใช้ตัวถูกกว่าได้ ประหยัดเงิน'),
+      field('ผู้สัมภาษณ์เรียกเราว่า', callName, 'ว่างไว้ = ใช้ชื่อด้านบน'),
+      field('ผู้สัมภาษณ์เรียกตัวเองว่า', selfName, 'ว่างไว้ = "เรา"'),
+      field('โมเดลหลัก (คุยกับ twin / สัมภาษณ์ / สร้างแก่นตัวตน)', model, 'เลือกตัวที่ฉลาดที่สุดที่ยอมจ่ายไหว ลองสลับดูได้'),
+      field('โมเดลเบา (ใช้ดึงความจำจากแชต)', light, 'ใช้ตัวถูกกว่าได้ ประหยัดเงิน'),
       dl, loadModels,
       h('div', { class: 'btns' }, test, h('button', { class: 'btn primary', onclick: async () => { await save(); toast('บันทึกแล้ว'); } }, 'บันทึก')),
     ),
@@ -94,6 +107,34 @@ export async function renderSettings(root, _p, ctx) {
     } catch (err) { toast(err.message || 'อ่านไฟล์ไม่ได้', 4000); }
   } });
   page.append(fileInput, h('p', { class: 'hint' }, `Twin v${APP_VERSION}`));
+}
+
+const pill = (spent, budget) => h('span', { class: `usd ${levelOf(spent, budget)}` }, `${fmtUsd(spent)} / ${fmtUsd(budget)}`);
+
+// การ์ดค่าใช้จ่าย AI: วันนี้/เดือนนี้เทียบกับงบ + ตั้งงบ
+async function usageCard() {
+  const u = await loadSummary();
+  const bd = h('input', { type: 'number', inputMode: 'decimal', min: '0', step: '0.5', value: u.budgetDay });
+  const bm = h('input', { type: 'number', inputMode: 'decimal', min: '0', step: '0.5', value: u.budgetMonth });
+  const rate = h('input', { type: 'number', inputMode: 'decimal', min: '1', step: '0.5', value: u.rate });
+  const num = (el, fb) => (Number.isFinite(parseFloat(el.value)) && parseFloat(el.value) >= 0 ? parseFloat(el.value) : fb);
+  return h('div', { class: 'card' },
+    h('div', { class: 'row between' }, h('span', {}, 'ค่า AI วันนี้'), pill(u.day.usd, u.budgetDay)),
+    h('div', { class: 'row between' }, h('span', {}, 'ค่า AI เดือนนี้ ', h('small', {}, `≈ ${fmtThb(u.month.usd, u.rate)}`)), pill(u.month.usd, u.budgetMonth)),
+    h('div', { class: 'row col' },
+      h('small', {}, `วันนี้ใช้ไป ${u.day.n} ครั้ง · ${(u.day.input + u.day.output).toLocaleString('th-TH')} โทเคน${u.day.unknown || u.month.unknown ? ' · บางครั้งยังคำนวณราคาไม่ได้ (กด "โหลดรายชื่อโมเดล" ด้านล่างเพื่อให้คำนวณได้)' : ''}`),
+      h('div', { class: 'trio' },
+        h('label', {}, h('small', {}, 'งบต่อวัน ($)'), bd),
+        h('label', {}, h('small', {}, 'งบต่อเดือน ($)'), bm),
+        h('label', {}, h('small', {}, 'บาท/ดอลลาร์'), rate)),
+      h('button', { class: 'btn primary', onclick: async () => {
+        await kvSet('budgetDay', num(bd, u.budgetDay));
+        await kvSet('budgetMonth', num(bm, u.budgetMonth));
+        await kvSet('rate', Math.max(1, num(rate, u.rate)));
+        toast('บันทึกงบแล้ว (ตัวเลขข้างบนอัปเดตเมื่อเปิดหน้านี้ใหม่)', 3500);
+      } }, 'บันทึกงบ'),
+      h('small', {}, 'นับเฉพาะที่ใช้ผ่านแอพนี้ · แอพจะเตือนก่อนส่งถ้าเกินงบ แต่ไม่ปิดกั้น')),
+  );
 }
 
 async function doExport() {

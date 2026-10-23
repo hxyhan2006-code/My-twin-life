@@ -8,6 +8,8 @@ import { renderBrain } from './brain.js';
 import { renderSettings } from './settings.js';
 import { h, iconEl, toast } from './ui.js';
 import { applyFontSize } from './state.js';
+import { setUsageSink } from './api.js';
+import { recordUsage } from './usage.js';
 
 const top = document.getElementById('top');
 const view = document.getElementById('view');
@@ -90,6 +92,7 @@ async function route() {
 }
 
 applyFontSize();
+setUsageSink(recordUsage);
 window.addEventListener('hashchange', route);
 if (!location.hash) location.hash = '#/chat';
 else route();

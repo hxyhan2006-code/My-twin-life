@@ -9,6 +9,7 @@ import { extractMemories } from './profile.js';
 import { createTypewriter } from './typewriter.js';
 import { createComposer } from './composer.js';
 import { getSettings, needsSetup } from './state.js';
+import { guardBudget } from './usage.js';
 import { h, toast, iconEl, popMenu, copyText, fadeTail } from './ui.js';
 
 const HISTORY = 20; // ส่งข้อความล่าสุดกี่ข้อความให้ AI
@@ -163,6 +164,7 @@ export async function renderChat(root, { id }, ctx) {
 
   // text = null → ตอบใหม่จากข้อความล่าสุดของเรา (ลองใหม่)
   async function turn(text) {
+    if (!(await guardBudget())) return;
     const s = await getSettings();
     const warn = needsSetup(s);
     if (warn) { toast(warn); return ctx.go('#/settings'); }
