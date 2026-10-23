@@ -201,3 +201,4 @@ textarea.big { resize: none; }
 .noted button { display: block; text-align: left; width: 100%; background: none; border: 0; color: var(--text); padding: 4px 0; font: inherit; }
 .reflect { color: var(--dim); }
 .chip.ghost { color: var(--dim); }
+.dhead .ver { margin-left: 10px; font-size: .5em; font-weight: 500; color: var(--dim); vertical-align: middle; }

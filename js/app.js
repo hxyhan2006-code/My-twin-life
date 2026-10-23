@@ -10,6 +10,7 @@ import { h, iconEl, toast } from './ui.js';
 import { applyFontSize } from './state.js';
 import { setUsageSink } from './api.js';
 import { recordUsage } from './usage.js';
+import { APP_VERSION } from './version.js';
 
 const top = document.getElementById('top');
 const view = document.getElementById('view');
@@ -49,7 +50,7 @@ async function refreshDrawer() {
   const cur = location.hash.match(/^#\/chat\/(.+)/)?.[1];
   drawer.innerHTML = '';
   drawer.append(
-    h('div', { class: 'dhead' }, 'Twin'),
+    h('div', { class: 'dhead' }, 'Twin', h('span', { class: 'ver' }, `v${APP_VERSION}`)),
     h('a', { class: 'nav on', href: '#/chat', onclick: () => { openDrawer(false); if (location.hash === '#/chat') ctx.go('#/chat'); } }, iconEl('newChat'), 'แชตใหม่'),
     h('div', { class: 'dsec' }, 'แชตที่ผ่านมา'),
     h('div', { class: 'chats' }, chats.length
