@@ -14,9 +14,9 @@ import { h, toast, iconEl, popMenu, copyText, fadeTail } from './ui.js';
 const HISTORY = 20; // ส่งข้อความล่าสุดกี่ข้อความให้ AI
 const MEMORIZE_EVERY = 4; // ทุกกี่ข้อความของเรา ให้ AI ดึงความจำใหม่
 const STARTERS = [
-  ['🤔', 'ช่วยคิดเรื่องที่กำลังลังเล'],
-  ['🪞', 'ทบทวนวันนี้ของเรา'],
-  ['🗓️', 'วางแผนสัปดาห์นี้'],
+  ['bulb', 'ช่วยคิดเรื่องที่กำลังลังเล'],
+  ['book', 'ทบทวนวันนี้ของเรา'],
+  ['calendar', 'วางแผนสัปดาห์นี้'],
 ];
 
 export async function renderChat(root, { id }, ctx) {
@@ -119,8 +119,8 @@ export async function renderChat(root, { id }, ctx) {
       box.append(h('a', { class: 'banner warn', href: '#/settings' }, 'ยังไม่ได้สำรองข้อมูลเกิน 7 วัน (ล้างเบราว์เซอร์แล้วข้อมูลหาย) — แตะเพื่อสำรอง'));
     }
     box.append(h('h2', {}, 'เริ่มจากไหนดี'));
-    for (const [emoji, text] of STARTERS) {
-      box.append(h('button', { class: 'starter', onclick: () => { input.value = text + ' '; input.focus(); composer.autosize(); } }, h('span', {}, emoji), text));
+    for (const [icon, text] of STARTERS) {
+      box.append(h('button', { class: 'starter', onclick: () => { input.value = text + ' '; input.focus(); composer.autosize(); } }, iconEl(icon, 'ico lead sm'), text));
     }
     list.append(box);
   }

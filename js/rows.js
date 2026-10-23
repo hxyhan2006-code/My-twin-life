@@ -48,7 +48,7 @@ export function memoryRow(m, { onChange }) {
       m.group = sel.value;
       await put('memories', m);
       onChange();
-    } }, GROUPS.map((g) => h('option', { value: g.id, selected: g.id === (m.group || 'other') }, `${g.emoji} ${g.name}`)));
+    } }, GROUPS.map((g) => h('option', { value: g.id, selected: g.id === (m.group || 'other') }, g.name)));
     row.append(
       h('p', { class: 'ans' }, m.text),
       h('small', {}, `${m.source === 'chat' ? 'จากแชต' : 'เพิ่มเอง'} · ${new Date(m.createdAt).toLocaleDateString('th-TH')}`),

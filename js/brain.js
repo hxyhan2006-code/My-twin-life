@@ -55,7 +55,7 @@ async function renderCore(root, ctx) {
 }
 
 async function renderGroup(root, g, ctx) {
-  ctx.setTitle(`${g.emoji} ${g.name}`);
+  ctx.setTitle(g.name);
   ctx.setRight(null);
   const page = h('div', { class: 'page' });
   root.append(page);
@@ -68,7 +68,7 @@ async function renderGroup(root, g, ctx) {
     for (const cid of g.cats) {
       const c = CATEGORIES.find((x) => x.id === cid);
       card.append(h('a', { class: 'row', href: `#/interview/${cid}` },
-        h('span', { class: 'emoji' }, c.emoji),
+        iconEl(c.icon, 'ico lead'),
         h('span', { class: 'grow' }, h('b', {}, `ตอบเพิ่ม: ${c.name}`), h('small', {}, `ตอบแล้ว ${answers.filter((a) => a.category === cid).length} ข้อ`)),
         iconEl('chevron')));
     }

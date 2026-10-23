@@ -40,7 +40,7 @@ function renderCategories(root, data, ctx) {
     const pct = answered + left ? Math.round((answered / (answered + left)) * 100) : 100;
     card.append(
       h('a', { class: 'row', href: `#/interview/${c.id}` },
-        h('span', { class: 'emoji' }, c.emoji),
+        iconEl(c.icon, 'ico lead'),
         h('span', { class: 'grow' }, h('b', {}, c.name),
           h('small', {}, left ? `ตอบแล้ว ${answered} · เหลือ ${left} ข้อ` : `ตอบครบแล้ว (${answered} ข้อ)`),
           h('span', { class: 'bar' }, h('i', { style: `width:${pct}%` }))),
@@ -54,10 +54,10 @@ function renderCategories(root, data, ctx) {
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function renderThread(root, c, ctx) {
-  ctx.setTitle(`${c.emoji} ${c.name}`);
+  ctx.setTitle(c.name);
   const list = h('div', { class: 'msgs' });
   const chipSkip = h('button', { class: 'chip', onclick: () => skip() }, 'ข้ามข้อนี้');
-  const chipDeep = h('button', { class: 'chip', onclick: () => deeper() }, '✨ เจาะลึกต่อ');
+  const chipDeep = h('button', { class: 'chip', onclick: () => deeper() }, 'เจาะลึกต่อ');
   const chipAuto = h('button', { class: 'chip', onclick: () => toggleAuto() });
   const composer = createComposer({ placeholder: 'พิมพ์คำตอบ…', onSubmit: () => submit() });
   root.append(list, h('div', { class: 'chips' }, chipSkip, chipDeep, chipAuto), composer.el);
@@ -90,7 +90,7 @@ async function renderThread(root, c, ctx) {
       q = null;
       const nextCat = CATEGORIES.find((x) => x.id !== c.id && queueFor(x.id, data).length);
       say([
-        h('div', { class: 'md' }, h('p', {}, '🎉 หมวดนี้ตอบครบแล้ว')),
+        h('div', { class: 'md doneline' }, iconEl('check'), h('p', {}, 'หมวดนี้ตอบครบแล้ว')),
         h('div', { class: 'btns left' },
           nextCat && h('a', { class: 'btn primary', href: `#/interview/${nextCat.id}` }, `ไปหมวด ${nextCat.name}`),
           h('a', { class: 'btn', href: `#/brain/${groupOfCat(c.id)}` }, 'ดู/แก้คำตอบ')),
@@ -101,7 +101,7 @@ async function renderThread(root, c, ctx) {
     const dots = say(h('div', { class: 'md' }, h('span', { class: 'pulse' })));
     await pause(380);
     dots.replaceWith(h('div', { class: 'msg ai in qmsg' },
-      h('small', { class: 'qno' }, q.parent ? '✨ ถามเจาะลึก' : `ข้อที่ ${data.answers.filter((a) => a.category === c.id).length + 1} · เหลือ ${queue.length} ข้อ`),
+      h('small', { class: 'qno' }, q.parent ? 'ถามเจาะลึก' : `ข้อที่ ${data.answers.filter((a) => a.category === c.id).length + 1} · เหลือ ${queue.length} ข้อ`),
       h('div', { class: 'md' }, h('p', {}, q.question))));
     toBottom();
     composer.input.focus();
@@ -160,6 +160,6 @@ async function renderThread(root, c, ctx) {
     busy = false;
   }
 
-  say(h('small', { class: 'dim' }, 'ตอบทีละข้อ พิมพ์เท่าที่อยากเล่า ข้ามได้ ถ้าอยากเล่าเพิ่มเติมกด "✨ เจาะลึกต่อ"'));
+  say(h('small', { class: 'dim' }, 'ตอบทีละข้อ พิมพ์เท่าที่อยากเล่า ข้ามได้ ถ้าอยากเล่าเพิ่มเติมกด "เจาะลึกต่อ"'));
   await next();
 }
