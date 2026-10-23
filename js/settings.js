@@ -4,6 +4,7 @@ import { kvGet, kvSet, exportAll, importAll, wipeAll } from './db.js';
 import { chatOnce, listModels } from './api.js';
 import { getSettings } from './state.js';
 import { h, toast } from './ui.js';
+import { APP_VERSION } from './version.js';
 
 const field = (label, input, note) => h('label', { class: 'field' }, h('span', {}, label), input, note && h('small', {}, note));
 
@@ -85,7 +86,7 @@ export async function renderSettings(root, _p, ctx) {
       ctx.refreshDrawer();
     } catch (err) { toast(err.message || 'อ่านไฟล์ไม่ได้', 4000); }
   } });
-  page.append(fileInput);
+  page.append(fileInput, h('p', { class: 'hint' }, `Twin v${APP_VERSION}`));
 }
 
 async function doExport() {
