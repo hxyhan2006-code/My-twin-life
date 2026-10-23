@@ -33,7 +33,11 @@ const svg = (d) =>
   `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
 export const icons = {
   menu: svg('<path d="M4 9h16M4 15h10"/>'),
-  newChat: svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>'),
+  newChat: svg('<path d="M12 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-6"/><path d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4z"/>'),
+  pencil: svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>'),
+  copy: svg('<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 012-2h9"/>'),
+  retry: svg('<path d="M20 11a8 8 0 10-2.3 5.7"/><path d="M20 4v7h-7"/>'),
+  dots: svg('<circle cx="12" cy="5" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="12" cy="19" r="1.3" fill="currentColor"/>'),
   back: svg('<path d="M15 18l-6-6 6-6"/>'),
   send: svg('<path d="M12 19V5M5 12l7-7 7 7"/>'),
   stop: '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>',
@@ -47,3 +51,60 @@ export const icons = {
 };
 
 export const iconEl = (name, cls = 'ico') => h('span', { class: cls, innerHTML: icons[name] });
+
+export async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const ta = h('textarea', { value: text, style: 'position:fixed;opacity:0' });
+    document.body.append(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+  }
+  toast('คัดลอกแล้ว');
+}
+
+// เมนูลอยข้างปุ่มที่กด (เหมือนเมนู ⋮ ของ ChatGPT) items = [{label, icon, danger, onClick}]
+export function popMenu(anchor, items, { align = 'right' } = {}) {
+  document.querySelector('.popscrim')?.remove();
+  const scrim = h('div', { class: 'popscrim' });
+  const close = () => scrim.remove();
+  const menu = h('div', { class: 'popmenu' }, items.map((it) =>
+    h('button', { class: it.danger ? 'danger' : '', onclick: () => { close(); it.onClick(); } }, it.icon && iconEl(it.icon), it.label)));
+  scrim.addEventListener('click', (e) => { if (e.target === scrim) close(); });
+  scrim.append(menu);
+  document.body.append(scrim);
+  const r = anchor.getBoundingClientRect();
+  const mw = menu.offsetWidth;
+  const mh = menu.offsetHeight;
+  const left = Math.max(8, Math.min(align === 'right' ? r.right - mw : r.left, innerWidth - mw - 8));
+  let top = r.bottom + 6;
+  if (top + mh > innerHeight - 8) top = Math.max(8, r.top - mh - 6);
+  menu.style.left = left + 'px';
+  menu.style.top = top + 'px';
+}
+
+// ทำให้ตัวอักษรท้ายสุดจางลงไล่ระดับ (ดูเหมือนข้อความค่อยๆ ไล่มา) ตัดตามกลุ่มตัวอักษร ไม่ตัดสระ/วรรณยุกต์ขาดจากพยัญชนะ
+export function fadeTail(root, n = 14) {
+  if (typeof Intl === 'undefined' || !Intl.Segmenter) return;
+  const seg = new Intl.Segmenter('th', { granularity: 'grapheme' });
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  let dist = 0;
+  for (let i = nodes.length - 1; i >= 0 && dist < n; i--) {
+    const parts = [...seg.segment(nodes[i].data)].map((x) => x.segment);
+    const take = Math.min(n - dist, parts.length);
+    if (!take) continue;
+    const frag = document.createDocumentFragment();
+    const head = parts.slice(0, parts.length - take).join('');
+    if (head) frag.append(head);
+    for (let k = 0; k < take; k++) {
+      const d = take - 1 - k + dist; // 0 = ตัวสุดท้ายของข้อความทั้งหมด
+      frag.append(h('span', { style: `opacity:${(0.22 + 0.78 * (d / n)).toFixed(2)}` }, parts[parts.length - take + k]));
+    }
+    nodes[i].replaceWith(frag);
+    dist += take;
+  }
+}

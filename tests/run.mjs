@@ -4,6 +4,7 @@ import { rank, grams } from '../js/retrieve.js';
 import { buildSystem, extractJson } from '../js/prompt.js';
 import { mdToHtml } from '../js/md.js';
 import { BASE_QUESTIONS, CATEGORIES, GROUPS, groupOfCat } from '../js/questions.js';
+import { createTypewriter } from '../js/typewriter.js';
 import { normalizeMemories } from '../js/profile.js';
 
 let n = 0;
@@ -82,6 +83,25 @@ t('normalizeMemories รับทั้งข้อความและ object 
   const r = normalizeMemories(['ก', { text: 'ข', group: 'goal' }, { text: 'ค', group: 'ไม่รู้จัก' }, { text: '  ' }, null]);
   assert.deepEqual(r, [{ text: 'ก', group: 'other' }, { text: 'ข', group: 'goal' }, { text: 'ค', group: 'other' }]);
   assert.deepEqual(normalizeMemories('ไม่ใช่ array'), []);
+});
+
+t('typewriter เผยทีละนิดจนครบ ไม่ตัดอีโมจิกลางคู่ และเร่งเมื่อค้างเยอะ', async () => {
+  const q = [];
+  const frames = [];
+  const tw = createTypewriter({ onFrame: (x) => frames.push(x), raf: (f) => (q.push(f), q.length), caf: () => {} });
+  const text = 'สวัสดี 👋😂 ' + 'ก'.repeat(300);
+  tw.push(text);
+  let n = 0;
+  while (q.length && n++ < 1000) q.shift()();
+  assert.equal(frames.at(-1), text);
+  assert.ok(frames.length > 5 && frames.length < text.length, 'ต้องทยอยเผย ไม่ใช่ทีละตัวอักษรตลอด');
+  for (const f of frames) assert.ok(!/[\ud800-\udbff]$/.test(f), 'ห้ามจบที่ครึ่งแรกของอีโมจิ');
+  for (let i = 1; i < frames.length; i++) assert.ok(frames[i].length > frames[i - 1].length);
+  // finish แล้ว flush ต้องเผยครบทันที
+  const f2 = [];
+  const tw2 = createTypewriter({ onFrame: (x) => f2.push(x), raf: () => 1, caf: () => {} });
+  tw2.push('abc'); tw2.flush();
+  assert.equal(f2.at(-1), 'abc');
 });
 
 console.log(`\nผ่านทั้งหมด ${n} ข้อ`);
