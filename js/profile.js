@@ -2,7 +2,7 @@
 
 import { chatOnce } from './api.js';
 import { extractJson } from './prompt.js';
-import { CATEGORIES } from './questions.js';
+import { CATEGORIES, GROUPS, groupById } from './questions.js';
 import { grams } from './retrieve.js';
 
 const qa = (a) => `Q: ${a.question}\nA: ${a.answer}`;
@@ -92,22 +92,31 @@ const sameish = (a, b) => {
   return hit / Math.min(ga.size, gb.size) > 0.7;
 };
 
-// ดึงเรื่องใหม่ที่ควรจำจากบทสนทนาล่าสุด คืนเป็นรายการข้อความ (ตัดอันที่ซ้ำกับของเดิมแล้ว)
+// รับได้ทั้ง "ข้อความ" และ {text, group} · group ที่ไม่รู้จักจัดเข้า other
+export function normalizeMemories(arr) {
+  const out = [];
+  for (const it of Array.isArray(arr) ? arr : []) {
+    const text = String(typeof it === 'string' ? it : it?.text ?? '').trim();
+    if (!text) continue;
+    out.push({ text, group: groupById(it?.group) ? it.group : 'other' });
+  }
+  return out;
+}
+
+// ดึงเรื่องใหม่ที่ควรจำจากบทสนทนาล่าสุด คืนเป็น [{text, group}] (ตัดอันที่ซ้ำกับของเดิมแล้ว)
 export async function extractMemories({ messages, existing, apiKey, model, name }) {
   const convo = messages.map((m) => `${m.role === 'user' ? name : 'Twin'}: ${m.content}`).join('\n');
   const known = existing.slice(-40).map((m) => `- ${m}`).join('\n') || '(ยังไม่มี)';
   const out = await chatOnce({
     apiKey, model, temperature: 0.2,
     messages: [
-      { role: 'system', content: `ดึง "ข้อมูลใหม่ที่ควรจำถาวร" เกี่ยวกับ ${name} จากบทสนทนา เช่น เหตุการณ์ การตัดสินใจ แผน ความรู้สึกสำคัญ ความชอบ ปัญหาที่กำลังเจอ เอาเฉพาะที่ ${name} เป็นคนบอกเอง ห้ามเอาความเห็นของ Twin มาเป็นข้อเท็จจริง แต่ละข้อเป็นประโยคสั้นภาษาไทยที่อ่านเดี่ยวๆ แล้วเข้าใจ ห้ามซ้ำกับที่รู้อยู่แล้ว ถ้าไม่มีอะไรใหม่ตอบ [] ตอบเป็น JSON array ของข้อความเท่านั้น` },
+      { role: 'system', content: `ดึง "ข้อมูลใหม่ที่ควรจำถาวร" เกี่ยวกับ ${name} จากบทสนทนา เช่น เหตุการณ์ การตัดสินใจ แผน ความรู้สึกสำคัญ ความชอบ ปัญหาที่กำลังเจอ เอาเฉพาะที่ ${name} เป็นคนบอกเอง ห้ามเอาความเห็นของ Twin มาเป็นข้อเท็จจริง แต่ละข้อเป็นประโยคสั้นภาษาไทยที่อ่านเดี่ยวๆ แล้วเข้าใจ ห้ามซ้ำกับที่รู้อยู่แล้ว ถ้าไม่มีอะไรใหม่ตอบ [] ตอบเป็น JSON array ของ object รูปแบบ {"text":"...","group":"..."} เท่านั้น โดย group เลือกจาก: ${GROUPS.map((g) => `${g.id}=${g.name}`).join(', ')}` },
       { role: 'user', content: `ที่รู้อยู่แล้ว:\n${known}\n\nบทสนทนา:\n${convo}` },
     ],
   });
-  const arr = extractJson(out);
-  if (!Array.isArray(arr)) return [];
   const fresh = [];
-  for (const s of arr.map((x) => String(x).trim()).filter(Boolean)) {
-    if (![...existing, ...fresh].some((e) => sameish(e, s))) fresh.push(s);
+  for (const m of normalizeMemories(extractJson(out))) {
+    if (![...existing, ...fresh.map((f) => f.text)].some((e) => sameish(e, m.text))) fresh.push(m);
   }
   return fresh.slice(0, 6);
 }

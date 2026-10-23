@@ -157,3 +157,16 @@ export const BASE_QUESTIONS = CATEGORIES.flatMap((c) =>
 );
 
 export const categoryById = (id) => CATEGORIES.find((c) => c.id === id);
+
+// หมวดใหญ่ที่แสดงในหน้า "สมองของ Twin" · ความจำที่ AI ดึงจากแชตจะถูกจัดเข้าหมวดเหล่านี้ด้วย
+export const GROUPS = [
+  { id: 'me', name: 'ข้อมูลส่วนตัว', emoji: '🪪', cats: ['basic', 'child', 'family'] },
+  { id: 'rel', name: 'ความสัมพันธ์', emoji: '👥', cats: ['love', 'social'] },
+  { id: 'habit', name: 'นิสัยและชีวิตประจำวัน', emoji: '🕒', cats: ['daily', 'likes', 'health'] },
+  { id: 'mind', name: 'ความคิดและความเชื่อ', emoji: '🧠', cats: ['values', 'mind', 'fear'] },
+  { id: 'goal', name: 'งาน เงิน และเป้าหมาย', emoji: '🚀', cats: ['work', 'money', 'dream'] },
+  { id: 'voice', name: 'น้ำเสียงและคำพูด', emoji: '🗣️', cats: ['voice'] },
+  { id: 'other', name: 'เรื่องอื่นๆ', emoji: '🗂️', cats: [] },
+];
+export const groupById = (id) => GROUPS.find((g) => g.id === id);
+export const groupOfCat = (cat) => GROUPS.find((g) => g.cats.includes(cat))?.id || 'other';

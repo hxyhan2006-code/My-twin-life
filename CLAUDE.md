@@ -58,6 +58,7 @@
 - ความจำ 3 ชั้น: แก่นตัวตน (ส่งทุกครั้ง) · คลังคำตอบ+ความจำ (ค้นด้วย `js/retrieve.js` ส่งเฉพาะที่เกี่ยว) · ความจำที่ AI ดึงจากแชตเอง
 
 ## โครงสร้างไฟล์
-- `index.html`, `css/style.css` · `js/app.js` (เมนู/สลับหน้า) · `js/chat.js` `interview.js` `memory.js` `settings.js` (แต่ละหน้า)
+- `index.html`, `css/style.css` · `js/app.js` (เมนู/สลับหน้า) · `js/chat.js` `interview.js` `me.js` (หน้าโปรไฟล์/ศูนย์รวม) `brain.js` (แก่นตัวตน + หน้าหมวดสมอง) `settings.js` (แต่ละหน้า) · `js/rows.js` (แถวคำตอบ/ความจำที่แก้-ลบได้)
 - `js/db.js` (IndexedDB + สำรอง/นำเข้า) · `js/api.js` (OpenRouter) · `js/prompt.js` (คำสั่งหลักของ twin) · `js/profile.js` (สร้างแก่นตัวตน/ถามเจาะลึก/ดึงความจำ) · `js/questions.js` (ชุดคำถาม)
+- เลขเวอร์ชันอยู่ที่ `js/version.js` (แสดงท้ายหน้าตั้งค่า) **ขยับทุกครั้งที่ส่งงานให้ Han เช็ก** เพื่อให้รู้ว่าเปิดของใหม่แล้ว
 - เทสต์: `node tests/run.mjs` (ตรรกะล้วน) · ข้อมูลที่บันทึกไว้ (answers/memories/chats/kv) ห้ามเปลี่ยนโครงสร้างโดยไม่ทำ migration (ดู `VERSION` ใน db.js)

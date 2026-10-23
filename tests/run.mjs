@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { rank, grams } from '../js/retrieve.js';
 import { buildSystem, extractJson } from '../js/prompt.js';
 import { mdToHtml } from '../js/md.js';
-import { BASE_QUESTIONS, CATEGORIES } from '../js/questions.js';
+import { BASE_QUESTIONS, CATEGORIES, GROUPS, groupOfCat } from '../js/questions.js';
+import { normalizeMemories } from '../js/profile.js';
 
 let n = 0;
 const t = (name, fn) => { fn(); n++; console.log('ok -', name); };
@@ -68,6 +69,19 @@ t('ชุดคำถาม: id ไม่ซ้ำ ทุกหมวดมี�
   assert.equal(new Set(ids).size, ids.length);
   assert.ok(CATEGORIES.every((c) => c.questions.length > 0));
   console.log(`   (${ids.length} ข้อ ใน ${CATEGORIES.length} หมวด)`);
+});
+
+t('ทุกหมวดสัมภาษณ์อยู่ในหมวดใหญ่หมวดเดียว ไม่มีตกหล่น/ซ้ำ', () => {
+  const all = GROUPS.flatMap((g) => g.cats);
+  assert.equal(new Set(all).size, all.length);
+  for (const c of CATEGORIES) assert.notEqual(groupOfCat(c.id), 'other', c.id);
+  assert.equal(groupOfCat('ไม่มีหมวดนี้'), 'other');
+});
+
+t('normalizeMemories รับทั้งข้อความและ object · group แปลกจัดเป็น other', () => {
+  const r = normalizeMemories(['ก', { text: 'ข', group: 'goal' }, { text: 'ค', group: 'ไม่รู้จัก' }, { text: '  ' }, null]);
+  assert.deepEqual(r, [{ text: 'ก', group: 'other' }, { text: 'ข', group: 'goal' }, { text: 'ค', group: 'other' }]);
+  assert.deepEqual(normalizeMemories('ไม่ใช่ array'), []);
 });
 
 console.log(`\nผ่านทั้งหมด ${n} ข้อ`);

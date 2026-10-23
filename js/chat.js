@@ -86,7 +86,7 @@ export async function renderChat(root, { id }, ctx) {
       const fresh = await extractMemories({ messages: recent, existing: mems.map((m) => m.text), apiKey: s.apiKey, model: s.lightModel, name: s.userName });
       chat.memorizedAt = userCount;
       await put('chats', chat);
-      for (const text of fresh) await put('memories', { id: uid(), text, source: 'chat', chatId: chat.id, createdAt: Date.now() });
+      for (const { text, group } of fresh) await put('memories', { id: uid(), text, group, source: 'chat', chatId: chat.id, createdAt: Date.now() });
       if (fresh.length) toast(`จำเพิ่ม ${fresh.length} เรื่อง`);
     } catch { /* ดึงความจำพลาดไม่เป็นไร รอบหน้าลองใหม่ */ }
   }

@@ -112,3 +112,14 @@ textarea.big:focus, .field input:focus, .search:focus { border-color: var(--acce
 
 #toast { position: fixed; left: 50%; bottom: calc(90px + var(--sb)); transform: translateX(-50%) translateY(20px); background: #3d3d3d; color: #fff; padding: 11px 18px; border-radius: 18px; max-width: 88vw; font-size: 15px; opacity: 0; pointer-events: none; transition: .2s; z-index: 20; text-align: center; }
 #toast.show { opacity: 1; transform: translateX(-50%); }
+
+/* เมนูข้าง: ชื่อ/โปรไฟล์มุมล่างซ้าย */
+.chats { flex: 1; min-height: 0; overflow-y: auto; }
+.dprofile { display: flex; align-items: center; gap: 12px; margin-top: 8px; padding: 12px 10px; border-top: 1px solid var(--line); border-radius: 12px; }
+.dprofile .grow { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.avatar { width: 64px; height: 64px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 28px; font-weight: 700; }
+.avatar.sm { width: 40px; height: 40px; font-size: 18px; flex: none; }
+.mehead { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px 0 8px; }
+.mename { font-size: 22px; font-weight: 700; }
+.mini { background: var(--pill); color: var(--text); border: 0; border-radius: 12px; padding: 6px 8px; font: inherit; font-size: 14px; max-width: 60%; }
+[hidden] { display: none !important; }

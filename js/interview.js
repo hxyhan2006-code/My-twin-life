@@ -1,6 +1,7 @@
 // หน้าสัมภาษณ์: เลือกหมวด → ตอบทีละข้อ (เซฟทันทีทุกข้อ) · AI ถามเจาะลึกต่อได้
 
-import { getAll, put, del, kvGet, kvSet, uid } from './db.js';
+import { getAll, put, kvGet, kvSet, uid } from './db.js';
+import { answerRow } from './rows.js';
 import { CATEGORIES, BASE_QUESTIONS, categoryById } from './questions.js';
 import { followUps } from './profile.js';
 import { getSettings, needsSetup } from './state.js';
@@ -102,7 +103,9 @@ async function renderQuestion(root, c, ctx) {
     if (answeredList.length) {
       page.append(h('h3', {}, `คำตอบของหมวดนี้ (${answeredList.length})`));
       const card = h('div', { class: 'card' });
-      for (const a of answeredList) card.append(answerRow(a, show));
+      for (const a of answeredList) {
+        card.append(answerRow(a, { onChange: show, extra: [{ label: 'ถามเจาะลึก', onClick: async (x) => { await askFollow(x); show(); } }] }));
+      }
       page.append(card);
     }
   }
@@ -120,40 +123,6 @@ async function renderQuestion(root, c, ctx) {
     } catch (e) {
       toast(e.message, 4000);
     }
-  }
-
-  function answerRow(a, refresh) {
-    const row = h('div', { class: 'row col' });
-    const view = () => {
-      row.innerHTML = '';
-      row.append(
-        h('small', {}, a.question),
-        h('p', { class: 'ans' }, a.answer),
-        h('div', { class: 'btns small' },
-          h('button', { class: 'link', onclick: edit }, 'แก้'),
-          h('button', { class: 'link', onclick: async () => { await askFollow(a); refresh(); } }, 'ถามเจาะลึก'),
-          h('button', { class: 'link danger', onclick: async () => {
-            if (!confirm('ลบคำตอบนี้?')) return;
-            await del('answers', a.id);
-            refresh();
-          } }, 'ลบ')),
-      );
-    };
-    const edit = () => {
-      const ta = h('textarea', { class: 'big', rows: 5, value: a.answer });
-      row.innerHTML = '';
-      row.append(h('small', {}, a.question), ta, h('div', { class: 'btns small' },
-        h('button', { class: 'link', onclick: view }, 'ยกเลิก'),
-        h('button', { class: 'link', onclick: async () => {
-          const t = ta.value.trim();
-          if (!t) return toast('คำตอบว่างไม่ได้ (ถ้าจะลบกดลบ)');
-          a.answer = t; a.updatedAt = Date.now();
-          await put('answers', a);
-          view();
-        } }, 'บันทึก')));
-    };
-    view();
-    return row;
   }
 
   await show();
