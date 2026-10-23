@@ -56,7 +56,7 @@ function renderCategories(root, data, ctx) {
 async function renderThread(root, c, ctx) {
   ctx.setTitle(c.name);
   const list = h('div', { class: 'msgs' });
-  const chipsEl = h('div', { class: 'chips' });
+  const chipsEl = h('div', { class: 'chips scroll', hidden: true });
   const composer = createComposer({ placeholder: 'พิมพ์ตอบ… เล่าเป็นเรื่องได้เลย', onSubmit: () => submit(composer.input.value.trim()) });
   root.append(list, chipsEl, composer.el);
 
@@ -79,16 +79,24 @@ async function renderThread(root, c, ctx) {
   const toBottom = () => list.scrollTo({ top: list.scrollHeight });
   const say = (kids, cls = '') => { const el = h('div', { class: `msg ai in ${cls}` }, kids); list.append(el); toBottom(); return el; };
   const mine = (text) => { list.append(h('div', { class: 'msg user in' }, h('div', { class: 'bub' }, text))); toBottom(); };
-  const paintHeader = () => ctx.setRight(h('a', { class: 'chip', href: `#/brain/${groupOfCat(c.id)}` }, `ตอบแล้ว ${answeredHere} · ดู/แก้`));
+  // เมนู ⋮ มุมขวาบน: ข้ามข้อ / จบรอบ / ดู-แก้ที่จดไว้ (ไม่เอามากองกับปุ่มตัวเลือกคำตอบ)
+  const paintHeader = () => {
+    const more = h('button', { class: 'round flat solo', title: 'เพิ่มเติม', onclick: () => popMenu(more, [
+      { label: 'ข้ามข้อนี้', icon: 'chevron', onClick: () => skip() },
+      { label: 'พอแค่นี้ก่อน (จบรอบ)', icon: 'check', onClick: () => wrap() },
+      { label: `ดู/แก้ที่จดไว้ (ตอบแล้ว ${answeredHere})`, icon: 'pencil', onClick: () => ctx.go(`#/brain/${groupOfCat(c.id)}`) },
+    ]) }, iconEl('dots'));
+    ctx.setRight(more);
+  };
 
+  // ปุ่มตัวเลือกคำตอบ: แถวเดียวเลื่อนข้างได้ ไม่ดันคำถามของ AI ให้โดนบัง
   function setChips(choices = []) {
     chipsEl.innerHTML = '';
-    if (ended) return;
+    chipsEl.hidden = ended || !choices.length;
+    if (chipsEl.hidden) return;
     for (const t of choices) chipsEl.append(h('button', { class: 'chip', onclick: () => submit(t) }, t));
-    chipsEl.append(
-      h('button', { class: 'chip ghost', onclick: () => skip() }, 'ข้ามข้อนี้'),
-      h('button', { class: 'chip ghost', onclick: () => wrap() }, 'พอแค่นี้ก่อน'),
-    );
+    chipsEl.scrollLeft = 0;
+    requestAnimationFrame(toBottom); // พื้นที่ของรายการลดลง เลื่อนให้เห็นข้อความล่าสุดเสมอ
   }
 
   // ข้อเท็จจริงที่ AI จดจากคำตอบล่าสุด: แตะเพื่อแก้/ลบ
@@ -138,7 +146,9 @@ async function renderThread(root, c, ctx) {
   async function aiTurn(mode) {
     if (!(await guardBudget())) { busy = false; setChips(); return; }
     busy = true;
+    list.dataset.busy = '1';
     chipsEl.innerHTML = '';
+    chipsEl.hidden = true;
     const dots = say(h('div', { class: 'md' }, h('span', { class: 'pulse' })));
     let reply;
     try {
@@ -153,11 +163,13 @@ async function renderThread(root, c, ctx) {
       const seed = await seedFallback();
       say(h('div', { class: 'md' }, h('p', { class: 'err' }, e.message)));
       chipsEl.innerHTML = '';
+      chipsEl.hidden = false;
       chipsEl.append(
-        h('button', { class: 'chip', onclick: () => { chipsEl.innerHTML = ''; aiTurn(mode); } }, 'ลองใหม่'),
+        h('button', { class: 'chip', onclick: () => { chipsEl.innerHTML = ''; chipsEl.hidden = true; aiTurn(mode); } }, 'ลองใหม่'),
         seed && h('button', { class: 'chip', onclick: () => { currentQ = seed.question; currentQid = seed.id; say(h('div', { class: 'md' }, h('p', {}, seed.question)), 'qmsg'); setChips(); } }, 'ใช้คำถามสำเร็จรูปแทน'),
       );
       busy = false;
+      list.dataset.busy = '0';
       return;
     }
     dots.remove();
@@ -177,7 +189,9 @@ async function renderThread(root, c, ctx) {
     }
     setChips(reply.choices);
     busy = false;
+    list.dataset.busy = '0';
     composer.input.focus();
+    toBottom();
   }
 
   async function submit(text) {
@@ -195,7 +209,8 @@ async function renderThread(root, c, ctx) {
   }
 
   async function skip() {
-    if (busy || ended) return;
+    if (ended) return;
+    if (busy) return toast('รอผู้สัมภาษณ์ตอบก่อนนะ');
     if (currentQid) await kvSet('skipped', [...new Set([...(await kvGet('skipped', [])), currentQid])]);
     say(h('small', { class: 'dim' }, 'ข้ามข้อนี้'));
     currentQid = null;
@@ -203,11 +218,12 @@ async function renderThread(root, c, ctx) {
   }
 
   async function wrap() {
-    if (busy || ended) return;
+    if (ended) return;
+    if (busy) return toast('รอผู้สัมภาษณ์ตอบก่อนนะ');
     await aiTurn('wrap');
   }
 
   paintHeader();
-  say(h('small', { class: 'dim' }, 'เล่าเท่าที่อยากเล่า ไม่มีถูกผิด ข้ามได้ทุกข้อ แตะ "พอแค่นี้ก่อน" เมื่อไหร่ก็ได้'));
+  say(h('small', { class: 'dim' }, 'เล่าเท่าที่อยากเล่า ไม่มีถูกผิด ข้ามได้ทุกข้อ · จะข้ามข้อหรือจบรอบเมื่อไหร่ก็ได้ที่เมนู ⋮ มุมขวาบน'));
   await aiTurn('start');
 }

@@ -200,5 +200,11 @@ textarea.big { resize: none; }
 .noted .nt svg { width: 16px; height: 16px; }
 .noted button { display: block; text-align: left; width: 100%; background: none; border: 0; color: var(--text); padding: 4px 0; font: inherit; }
 .reflect { color: var(--dim); }
-.chip.ghost { color: var(--dim); }
 .dhead .ver { margin-left: 10px; font-size: .5em; font-weight: 500; color: var(--dim); vertical-align: middle; }
+
+/* ปุ่มตัวเลือกคำตอบของผู้สัมภาษณ์: แถวเดียว เลื่อนข้าง */
+.chips.scroll { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; align-items: stretch; }
+.chips.scroll::-webkit-scrollbar { display: none; }
+.chips[hidden] { display: none; }
+.chips.scroll .chip { max-width: 78%; white-space: normal; text-align: left; line-height: 1.35; padding: 10px 16px; }
+.round.solo { background: var(--pill); width: 46px; }
