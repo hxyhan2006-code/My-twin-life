@@ -10,6 +10,7 @@ import { summarize, addToDays, levelOf, costOf, fmtUsd, fmtThb, dayKey } from '.
 import { normalizeMemories } from '../js/profile.js';
 import { goalsForPrompt } from '../js/goals.js';
 import { financeForPrompt } from '../js/vaultet.js';
+import { instructionsForPrompt } from '../js/instructions.js';
 import { collectWriting, clampTexts, pickSamples } from '../js/style.js';
 
 let n = 0;
@@ -104,6 +105,14 @@ t('การเงินจาก Vaultet: จัดข้อความคร�
   const s = buildSystem({ name: 'Han', finance: text });
   assert.ok(s.includes('จากแอพ Vaultet') && s.includes('ห้ามเดาตัวเลข'));
   assert.ok(!buildSystem({ name: 'Han' }).includes('Vaultet'));
+});
+
+t('คำสั่งถึง twin: ส่งเฉพาะข้อที่เปิด ตัดข้อว่าง และ buildSystem ใส่ให้ (ไม่มีก็ไม่ขึ้นหัวข้อ)', () => {
+  const list = [{ text: 'ตอบสั้นๆ', on: true }, { text: 'อย่าใช้อีโมจิ', on: false }, { text: '   ', on: true }];
+  assert.deepEqual(instructionsForPrompt(list), ['ตอบสั้นๆ']);
+  const s = buildSystem({ name: 'Han', instructions: ['ตอบสั้นๆ'] });
+  assert.ok(s.includes('- ตอบสั้นๆ') && s.includes('ไม่ปิดกฎข้อ 6'));
+  assert.ok(!buildSystem({ name: 'Han', instructions: [] }).includes('คำสั่งที่ Han ตั้งไว้'));
 });
 
 t('collectWriting รวมข้อความของเราจากแชต+คำตอบสัมภาษณ์ เรียงเวลา ไม่เอาของ AI', () => {

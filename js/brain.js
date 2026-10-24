@@ -9,6 +9,7 @@ import { h, toast, iconEl } from './ui.js';
 import { learnStyle, STYLE_EVERY } from './style.js';
 import { renderGoals } from './goals.js';
 import { renderVaultet } from './vaultet.js';
+import { renderInstructions } from './instructions.js';
 
 export async function renderBrain(root, { id }, ctx) {
   if (id === 'core') return renderCore(root, ctx);
@@ -16,6 +17,7 @@ export async function renderBrain(root, { id }, ctx) {
   if (id === 'style') return renderStyle(root, ctx);
   if (id === 'goals') return renderGoals(root, ctx);
   if (id === 'vaultet') return renderVaultet(root, ctx);
+  if (id === 'instr') return renderInstructions(root, ctx);
   const g = groupById(id);
   if (!g) return ctx.go('#/me');
   return renderGroup(root, g, ctx);

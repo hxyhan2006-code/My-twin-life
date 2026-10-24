@@ -6,6 +6,7 @@ import { getSettings } from './state.js';
 import { h, iconEl } from './ui.js';
 import { loadGoals } from './goals.js';
 import { isLinked, readSnapshot } from './vaultet.js';
+import { loadInstructions } from './instructions.js';
 
 const row = (href, icon, title, sub) =>
   h('a', { class: 'row', href },
@@ -22,6 +23,7 @@ export async function renderMe(root, _p, ctx) {
   for (const m of mems) count[groupById(m.group) ? m.group : 'other']++;
 
   const activeGoals = (await loadGoals()).filter((g) => g.status === 'active').length;
+  const activeInstr = (await loadInstructions()).filter((i) => i.on).length;
   const finLinked = await isLinked();
   const finSnap = readSnapshot();
   const unchecked = mems.filter((m) => m.source === 'chat' && !m.reviewed).length;
@@ -35,6 +37,7 @@ export async function renderMe(root, _p, ctx) {
     h('h3', {}, 'Twin ของฉัน'),
     h('div', { class: 'card' },
       row('#/brain/core', 'gem', 'แก่นตัวตน', 'ตัวตนหลักที่ twin อ่านทุกครั้งที่คุย'),
+      row('#/brain/instr', 'pencil', 'คำสั่งถึง Twin', activeInstr ? `เปิดอยู่ ${activeInstr} ข้อ` : 'สั่งให้ twin พูด/คิดแบบที่เราต้องการ'),
       row('#/brain/goals', 'flag', 'เป้าหมายและแผน', activeGoals ? `กำลังทำ ${activeGoals} เรื่อง` : 'บอก twin ว่าเราอยากไปทางไหน'),
       row('#/brain/vaultet', 'wallet', 'การเงินจาก Vaultet', finLinked && finSnap ? 'เชื่อมแล้ว twin เห็นภาพการเงินของเรา' : finLinked ? 'ยังไม่พบข้อมูลจาก Vaultet' : 'ปิดอยู่'),
       row('#/brain/style', 'chat', 'สไตล์การพูดของเรา', 'AI เรียนรู้วิธีพูดและวิธีคิดจากที่เราพิมพ์จริง'),

@@ -1,6 +1,6 @@
 // สร้างคำสั่งหลัก (system prompt) ให้ twin พูดเป็น "เรา" ที่ฉลาดกว่า
 
-export function buildSystem({ name = 'Han', core = '', style = '', samples = [], retrieved = [], goals = [], finance = '', deep = false, now = new Date() }) {
+export function buildSystem({ name = 'Han', core = '', style = '', samples = [], retrieved = [], goals = [], finance = '', instructions = [], deep = false, now = new Date() }) {
   const date = now.toLocaleString('th-TH', { dateStyle: 'full', timeStyle: 'short' });
   const parts = [];
   parts.push(
@@ -39,6 +39,9 @@ export function buildSystem({ name = 'Han', core = '', style = '', samples = [],
   }
   if (samples.length) {
     parts.push(`## ตัวอย่างข้อความจริงที่ ${name} พิมพ์ (ดูน้ำเสียง ไม่ต้องก๊อปประโยค)\n${samples.map((x) => `- ${x.replace(/\n+/g, ' / ')}`).join('\n')}`);
+  }
+  if (instructions.length) {
+    parts.push(`## คำสั่งที่ ${name} ตั้งไว้ให้คุณทำตามเสมอ (มีผลเหนือสไตล์ทั่วไป แต่ไม่ปิดกฎข้อ 6 เรื่องความปลอดภัย)\n${instructions.map((x) => `- ${x}`).join('\n')}`);
   }
   if (finance.trim()) {
     parts.push(

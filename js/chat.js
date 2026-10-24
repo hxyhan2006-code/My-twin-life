@@ -9,6 +9,7 @@ import { extractMemories } from './profile.js';
 import { learnStyle } from './style.js';
 import { loadGoals, goalsForPrompt } from './goals.js';
 import { financeText } from './vaultet.js';
+import { loadInstructions, instructionsForPrompt } from './instructions.js';
 import { createTypewriter } from './typewriter.js';
 import { createComposer } from './composer.js';
 import { getSettings, needsSetup } from './state.js';
@@ -197,7 +198,7 @@ export async function renderChat(root, { id }, ctx) {
     setHeader();
     toBottom();
 
-    const [answers, mems, core, style, samples, goals, finance] = await Promise.all([getAll('answers'), getAll('memories'), kvGet('coreProfile', ''), kvGet('styleProfile', ''), kvGet('styleSamples', []), loadGoals(), financeText()]);
+    const [answers, mems, core, style, samples, goals, finance, instr] = await Promise.all([getAll('answers'), getAll('memories'), kvGet('coreProfile', ''), kvGet('styleProfile', ''), kvGet('styleSamples', []), loadGoals(), financeText(), loadInstructions()]);
     const userMsgs = chat.messages.filter((m) => m.role === 'user');
     const last = userMsgs.at(-1).content;
     const query = last + (last.length < 25 && userMsgs.length > 1 ? ' ' + userMsgs.at(-2).content : '');
@@ -207,7 +208,7 @@ export async function renderChat(root, { id }, ctx) {
     ];
     const used = rank(query, pool).map((r) => r.it.text);
     const isDeep = deep;
-    const system = buildSystem({ name: s.userName, core, style, samples, retrieved: used, goals: goalsForPrompt(goals), finance, deep: isDeep });
+    const system = buildSystem({ name: s.userName, core, style, samples, retrieved: used, goals: goalsForPrompt(goals), finance, instructions: instructionsForPrompt(instr), deep: isDeep });
     const history = chat.messages.filter((m) => !m.error).slice(-HISTORY).map(({ role, content }) => ({ role, content }));
 
     const ai = { role: 'assistant', content: '', used, ts: Date.now() };
