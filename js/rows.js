@@ -40,7 +40,7 @@ export function answerRow(a, { onChange, extra = [] }) {
   return row;
 }
 
-export function memoryRow(m, { onChange }) {
+export function memoryRow(m, { onChange, extra = [] }) {
   const row = h('div', { class: 'row col' });
   const view = () => {
     row.innerHTML = '';
@@ -53,6 +53,7 @@ export function memoryRow(m, { onChange }) {
       h('p', { class: 'ans' }, m.text),
       h('small', {}, `${m.source === 'chat' ? 'จากแชต' : 'เพิ่มเอง'} · ${new Date(m.createdAt).toLocaleDateString('th-TH')}`),
       h('div', { class: 'btns small' }, sel,
+        extra.map((x) => h('button', { class: 'link', onclick: () => x.onClick(m) }, x.label)),
         h('button', { class: 'link', onclick: edit }, 'แก้'),
         h('button', { class: 'link danger', onclick: async () => {
           await del('memories', m.id);

@@ -9,6 +9,7 @@ import { h, toast, iconEl } from './ui.js';
 
 export async function renderBrain(root, { id }, ctx) {
   if (id === 'core') return renderCore(root, ctx);
+  if (id === 'chatmem') return renderChatMemories(root, ctx);
   const g = groupById(id);
   if (!g) return ctx.go('#/me');
   return renderGroup(root, g, ctx);
@@ -52,6 +53,43 @@ async function renderCore(root, ctx) {
     ta, status, prog, h('div', { class: 'btns' }, saveBtn, gen),
     h('p', { class: 'hint' }, `ใช้คำตอบ ${answers.length} ข้อ · การสร้างจะเรียก AI หลายครั้งถ้าคำตอบเยอะ มีค่าใช้จ่าย API เล็กน้อย`),
   );
+}
+
+// ตรวจสิ่งที่ AI จดจากแชตเอง: กด "ถูกต้อง" = ตรวจแล้ว (เก็บ m.reviewed) · แก้/ลบ/ย้ายหมวดได้เหมือนหน้าหมวด
+async function renderChatMemories(root, ctx) {
+  ctx.setTitle('ตรวจที่จำจากแชต');
+  ctx.setRight(null);
+  const page = h('div', { class: 'page' });
+  root.append(page);
+  const [allMem, chats] = await Promise.all([getAll('memories'), getAll('chats')]);
+  const titleOf = Object.fromEntries(chats.map((c) => [c.id, c.title]));
+  const mine = allMem.filter((m) => m.source === 'chat').sort((a, b) => b.createdAt - a.createdAt);
+  const todo = mine.filter((m) => !m.reviewed);
+  const done = mine.filter((m) => m.reviewed);
+
+  const redraw = () => { root.innerHTML = ''; renderChatMemories(root, ctx); };
+  const markOk = async (m) => { m.reviewed = true; await put('memories', m); redraw(); };
+  const rowOf = (m, extra) => {
+    const r = memoryRow(m, { onChange: redraw, extra });
+    r.prepend(h('small', {}, `จากแชต: ${titleOf[m.chatId] || 'แชตที่ลบไปแล้ว'}`));
+    return r;
+  };
+
+  page.append(h('p', { class: 'hint' }, 'AI จดเรื่องเราจากการคุยในแชตเอง ถ้าจดผิดหรือเข้าใจเราผิด twin จะเรียนรู้ผิดไปด้วย ไล่อ่านแล้วกด "ถูกต้อง" ถ้าตรง หรือแก้/ลบถ้าไม่ตรง'));
+  if (todo.length) {
+    page.append(h('h3', {}, `รอตรวจ (${todo.length})`),
+      h('div', { class: 'card' }, todo.map((m) => rowOf(m, [{ label: 'ถูกต้อง', onClick: markOk }]))),
+      h('div', { class: 'btns' }, h('button', { class: 'btn ghost', onclick: async () => {
+        if (!confirm(`ทำเครื่องหมายว่าถูกต้องทั้ง ${todo.length} เรื่อง?`)) return;
+        for (const m of todo) { m.reviewed = true; await put('memories', m); }
+        redraw();
+      } }, 'ถูกต้องทั้งหมด')));
+  } else {
+    page.append(h('p', { class: 'hint' }, mine.length ? 'ตรวจครบแล้ว ไม่มีอะไรรอตรวจ' : 'ยังไม่มีความจำจากแชต พอคุยกับ twin ไปสักพัก AI จะจดมาไว้ตรงนี้'));
+  }
+  if (done.length) {
+    page.append(h('h3', {}, `ตรวจแล้ว (${done.length})`), h('div', { class: 'card' }, done.map((m) => rowOf(m))));
+  }
 }
 
 async function renderGroup(root, g, ctx) {

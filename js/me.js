@@ -19,6 +19,8 @@ export async function renderMe(root, _p, ctx) {
   for (const a of answers) count[groupOfCat(a.category)]++;
   for (const m of mems) count[groupById(m.group) ? m.group : 'other']++;
 
+  const unchecked = mems.filter((m) => m.source === 'chat' && !m.reviewed).length;
+
   const page = h('div', { class: 'page' });
   page.append(
     h('div', { class: 'mehead' },
@@ -28,7 +30,8 @@ export async function renderMe(root, _p, ctx) {
     h('h3', {}, 'Twin ของฉัน'),
     h('div', { class: 'card' },
       row('#/brain/core', 'gem', 'แก่นตัวตน', 'ตัวตนหลักที่ twin อ่านทุกครั้งที่คุย'),
-      row('#/interview', 'askchat', 'สัมภาษณ์', 'ตอบคำถามเพื่อให้ twin รู้จักเรามากขึ้น')),
+      row('#/interview', 'askchat', 'สัมภาษณ์', 'ตอบคำถามเพื่อให้ twin รู้จักเรามากขึ้น'),
+      row('#/brain/chatmem', 'check', 'ตรวจที่จำจากแชต', unchecked ? `รอตรวจ ${unchecked} เรื่อง` : 'ดูว่า AI จดอะไรจากที่เราคุย')),
     h('h3', {}, 'สมองของ Twin'),
     h('div', { class: 'card' }, GROUPS.map((g) => row(`#/brain/${g.id}`, g.icon, g.name, `${count[g.id]} รายการ`))),
     h('h3', {}, 'ระบบ'),
