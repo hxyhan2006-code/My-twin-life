@@ -57,6 +57,8 @@ details.used p { margin: 6px 0; padding-left: 10px; border-left: 2px solid var(-
 .composer { padding: 8px 12px calc(10px + var(--sb)); }
 .pill { display: flex; align-items: flex-end; gap: 6px; background: var(--pill); border-radius: 28px; padding: 6px 6px 6px 16px; }
 .pill textarea { scrollbar-width: none; flex: 1; min-width: 0; background: none; border: 0; outline: none; color: var(--text); font: inherit; font-size: 1.0em; resize: none; max-height: 160px; padding: 9px 0; line-height: 1.4; }
+.tg { align-self: center; flex: none; height: 34px; padding: 0 12px; border-radius: 17px; border: 1px solid var(--line); background: none; color: var(--dim); font-size: 0.812em; }
+.tg[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
 .send { width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--accent); color: #fff; display: grid; place-items: center; flex: none; }
 
 /* เมนูข้าง */

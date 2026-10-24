@@ -57,8 +57,8 @@ export async function chatOnce({ apiKey, model, messages, temperature = 0.4, max
 }
 
 // ถามแบบทยอยส่งตัวอักษรมาเรื่อยๆ (ใช้ในหน้าแชต)
-export async function chatStream({ apiKey, model, messages, temperature = 0.8, signal, onDelta }) {
-  const res = await post({ model, messages, temperature, stream: true, usage: { include: true } }, apiKey, signal);
+export async function chatStream({ apiKey, model, messages, temperature = 0.8, signal, onDelta, extra = {} }) {
+  const res = await post({ model, messages, temperature, stream: true, usage: { include: true }, ...extra }, apiKey, signal);
   const reader = res.body.getReader();
   const dec = new TextDecoder();
   let buf = '';

@@ -22,6 +22,7 @@ export async function renderSettings(root, _p, ctx) {
   const showKey = h('button', { class: 'link', type: 'button', onclick: () => { key.type = key.type === 'password' ? 'text' : 'password'; } }, 'แสดง/ซ่อน key');
   const dl = h('datalist', { id: 'models' });
   const model = h('input', { value: s.model, list: 'models', placeholder: 'เช่น provider/model-name', autocomplete: 'off', autocapitalize: 'off', spellcheck: false });
+  const deep = h('input', { value: (await kvGet('deepModel', '')) || '', list: 'models', placeholder: 'ว่างไว้ = ใช้ตัวเดียวกับโมเดลหลัก', autocomplete: 'off', autocapitalize: 'off', spellcheck: false });
   const light = h('input', { value: (await kvGet('lightModel', '')) || '', list: 'models', placeholder: 'ว่างไว้ = ใช้ตัวเดียวกับด้านบน', autocomplete: 'off', autocapitalize: 'off', spellcheck: false });
 
   const callName = h('input', { value: s.callName, placeholder: `เช่น ${s.userName}`, autocomplete: 'off' });
@@ -43,6 +44,7 @@ export async function renderSettings(root, _p, ctx) {
     await kvSet('apiKey', key.value.trim());
     await kvSet('model', model.value.trim());
     await kvSet('lightModel', light.value.trim());
+    await kvSet('deepModel', deep.value.trim());
     await kvSet('callName', callName.value.trim());
     await kvSet('selfName', selfName.value.trim());
   };
@@ -68,6 +70,7 @@ export async function renderSettings(root, _p, ctx) {
       field('ผู้สัมภาษณ์เรียกเราว่า', callName, 'ว่างไว้ = ใช้ชื่อด้านบน'),
       field('ผู้สัมภาษณ์เรียกตัวเองว่า', selfName, 'ว่างไว้ = "เรา"'),
       field('โมเดลหลัก (คุยกับ twin / สัมภาษณ์ / สร้างแก่นตัวตน)', model, 'เลือกตัวที่ฉลาดที่สุดที่ยอมจ่ายไหว ลองสลับดูได้'),
+      field('โมเดลคิดลึก (ตอนกดปุ่ม "คิดลึก" ในแชต)', deep, 'ใส่ตัวที่เก่งที่สุดเท่าที่งบไหว ตอบช้ากว่าและแพงกว่าปกติ ใช้เฉพาะเรื่องสำคัญ'),
       field('โมเดลเบา (ใช้ดึงความจำจากแชต)', light, 'ใช้ตัวถูกกว่าได้ ประหยัดเงิน'),
       dl, loadModels,
       h('div', { class: 'btns' }, test, h('button', { class: 'btn primary', onclick: async () => { await save(); toast('บันทึกแล้ว'); } }, 'บันทึก')),

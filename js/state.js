@@ -1,10 +1,10 @@
 import { kvGet, kvSet } from './db.js';
 
 export async function getSettings() {
-  const [apiKey, model, lightModel, userName, callName, selfName] = await Promise.all([
-    kvGet('apiKey', ''), kvGet('model', ''), kvGet('lightModel', ''), kvGet('userName', 'Han'), kvGet('callName', ''), kvGet('selfName', ''),
+  const [apiKey, model, lightModel, deepModel, userName, callName, selfName] = await Promise.all([
+    kvGet('apiKey', ''), kvGet('model', ''), kvGet('lightModel', ''), kvGet('deepModel', ''), kvGet('userName', 'Han'), kvGet('callName', ''), kvGet('selfName', ''),
   ]);
-  return { apiKey, model, lightModel: lightModel || model, userName: userName || 'Han', callName, selfName };
+  return { apiKey, model, lightModel: lightModel || model, deepModel: deepModel || model, userName: userName || 'Han', callName, selfName };
 }
 
 export const needsSetup = (s) => (!s.apiKey ? 'ยังไม่ได้ใส่ OpenRouter key' : !s.model ? 'ยังไม่ได้เลือกโมเดล' : '');

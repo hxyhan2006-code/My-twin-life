@@ -27,7 +27,15 @@ export async function renderChat(root, { id }, ctx) {
   chat = chat || { id: uid(), title: 'แชตใหม่', messages: [], createdAt: Date.now(), updatedAt: Date.now(), memorizedAt: 0, isNew: true };
 
   const list = h('div', { class: 'msgs' });
-  const composer = createComposer({ placeholder: 'พิมพ์คุยกับตัวเอง…', onSubmit: (viaKey) => onSubmit(viaKey) });
+  let deep = false; // โหมดคิดลึก: เปิดเองทีละครั้ง ปิดไว้ตอนเข้าหน้าแชตใหม่ จะได้ไม่เปลืองโดยไม่รู้ตัว
+  const composer = createComposer({
+    placeholder: 'พิมพ์คุยกับตัวเอง…',
+    onSubmit: (viaKey) => onSubmit(viaKey),
+    toggle: { label: 'คิดลึก', title: 'คิดลึก: ใช้โมเดลที่เก่งกว่า ตอบช้ากว่าและแพงกว่าปกติ', onChange: (on) => {
+      deep = on;
+      toast(on ? 'เปิดคิดลึก: ตอบช้าลงและแพงกว่าปกติ ใช้กับเรื่องสำคัญ' : 'ปิดคิดลึกแล้ว');
+    } },
+  });
   const { input } = composer;
   const toEnd = h('button', { class: 'toend', title: 'ไปล่างสุด', hidden: true, onclick: () => toBottom(true) }, iconEl('down'));
   root.append(h('div', { class: 'msgwrap' }, list, toEnd), composer.el);
@@ -192,11 +200,12 @@ export async function renderChat(root, { id }, ctx) {
       ...mems.map((m) => ({ text: m.text })),
     ];
     const used = rank(query, pool).map((r) => r.it.text);
-    const system = buildSystem({ name: s.userName, core, style, samples, retrieved: used });
+    const isDeep = deep;
+    const system = buildSystem({ name: s.userName, core, style, samples, retrieved: used, deep: isDeep });
     const history = chat.messages.filter((m) => !m.error).slice(-HISTORY).map(({ role, content }) => ({ role, content }));
 
     const ai = { role: 'assistant', content: '', used, ts: Date.now() };
-    const body = h('div', { class: 'md' }, h('span', { class: 'pulse' }));
+    const body = h('div', { class: 'md' }, h('span', { class: 'pulse' }), isDeep && h('small', { class: 'hint' }, ' กำลังคิดลึก อาจรอสักพัก…'));
     const el = h('div', { class: 'msg ai' }, body);
     list.append(el);
     toBottom();
@@ -215,7 +224,8 @@ export async function renderChat(root, { id }, ctx) {
     let err = '';
     try {
       ai.content = await chatStream({
-        apiKey: s.apiKey, model: s.model, signal: current.abort.signal,
+        apiKey: s.apiKey, model: isDeep ? s.deepModel : s.model, signal: current.abort.signal,
+        extra: isDeep ? { reasoning: { effort: 'high' } } : {},
         messages: [{ role: 'system', content: system }, ...history],
         onDelta: (full) => { ai.content = full; tw.push(full); },
       });

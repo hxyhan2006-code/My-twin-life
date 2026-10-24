@@ -60,6 +60,11 @@ t('buildSystem ใส่สไตล์การพูดและตัวอ�
   assert.ok(!none.includes('เรียนรู้จากที่เขาพิมพ์จริง') && !none.includes('ตัวอย่างข้อความจริง'));
 });
 
+t('buildSystem โหมดคิดลึก: มีกฎโต้แย้งก่อนเห็นด้วย เฉพาะตอนเปิด', () => {
+  assert.ok(buildSystem({ name: 'Han', deep: true }).includes('ห้ามเออออ'));
+  assert.ok(!buildSystem({ name: 'Han' }).includes('โหมดคิดลึก'));
+});
+
 t('collectWriting รวมข้อความของเราจากแชต+คำตอบสัมภาษณ์ เรียงเวลา ไม่เอาของ AI', () => {
   const chats = [{ updatedAt: 5, messages: [{ role: 'user', content: 'ก', ts: 3 }, { role: 'assistant', content: 'ไม่เอา', ts: 4 }] }];
   const answers = [{ answer: 'ข', updatedAt: 1 }, { answer: '', updatedAt: 2 }];
