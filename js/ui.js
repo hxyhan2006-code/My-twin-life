@@ -34,6 +34,7 @@ const svg = (d) =>
 export const icons = {
   menu: svg('<path d="M4 9h16M4 15h10"/>'),
   newChat: svg('<path d="M12 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-6"/><path d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4z"/>'),
+  caret: svg('<path d="M6 9l6 6 6-6"/>'),
   close: svg('<path d="M6 6l12 12M18 6L6 18"/>'),
   pencil: svg('<path d="M17 3a2.85 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5z"/>'),
   copy: svg('<rect x="8" y="8" width="14" height="14" rx="3"/><path d="M4 16c-1.1 0-2-.9-2-2V5a3 3 0 013-3h9c1.1 0 2 .9 2 2"/>'),
@@ -88,13 +89,17 @@ export async function copyText(text) {
   toast('คัดลอกแล้ว');
 }
 
-// เมนูลอยข้างปุ่มที่กด (เหมือนเมนู ⋮ ของ ChatGPT) items = [{label, icon, danger, onClick}]
+// เมนูลอยข้างปุ่มที่กด (เหมือนเมนู ⋮ ของ ChatGPT) items = [{label, icon, danger, onClick, sub, checked}]
+// sub = ข้อความเล็กใต้ชื่อ · checked = true/false แสดงติ๊กหน้าข้อ (ใช้กับเมนูเลือกตัวเลือก)
 export function popMenu(anchor, items, { align = 'right' } = {}) {
   document.querySelector('.popscrim')?.remove();
   const scrim = h('div', { class: 'popscrim' });
   const close = () => scrim.remove();
   const menu = h('div', { class: 'popmenu' }, items.map((it) =>
-    h('button', { class: it.danger ? 'danger' : '', onclick: () => { close(); it.onClick(); } }, it.icon && iconEl(it.icon), it.label)));
+    h('button', { class: it.danger ? 'danger' : '', onclick: () => { close(); it.onClick(); } },
+      it.icon && iconEl(it.icon),
+      it.checked !== undefined && h('span', { class: 'tick' }, it.checked && iconEl('check')),
+      it.sub ? h('span', { class: 'grow' }, it.label, h('small', {}, it.sub)) : it.label)));
   scrim.addEventListener('click', (e) => { if (e.target === scrim) close(); });
   scrim.append(menu);
   document.body.append(scrim);

@@ -39,7 +39,7 @@ function openDrawer(on) {
 scrim.addEventListener('click', () => openDrawer(false));
 
 const ctx = {
-  setTitle: (t) => { titleEl.textContent = t; },
+  setTitle: (t) => { titleEl.replaceChildren(t); },
   setRight: (el) => { rightSlot.innerHTML = ''; if (el) rightSlot.append(el); },
   go: (hash) => { if (location.hash === hash) route(); else location.hash = hash; },
   refreshDrawer,

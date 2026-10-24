@@ -27,15 +27,8 @@ export async function renderChat(root, { id }, ctx) {
   chat = chat || { id: uid(), title: 'แชตใหม่', messages: [], createdAt: Date.now(), updatedAt: Date.now(), memorizedAt: 0, isNew: true };
 
   const list = h('div', { class: 'msgs' });
-  let deep = false; // โหมดคิดลึก: เปิดเองทีละครั้ง ปิดไว้ตอนเข้าหน้าแชตใหม่ จะได้ไม่เปลืองโดยไม่รู้ตัว
-  const composer = createComposer({
-    placeholder: 'พิมพ์คุยกับตัวเอง…',
-    onSubmit: (viaKey) => onSubmit(viaKey),
-    toggle: { label: 'คิดลึก', title: 'คิดลึก: ใช้โมเดลที่เก่งกว่า ตอบช้ากว่าและแพงกว่าปกติ', onChange: (on) => {
-      deep = on;
-      toast(on ? 'เปิดคิดลึก: ตอบช้าลงและแพงกว่าปกติ ใช้กับเรื่องสำคัญ' : 'ปิดคิดลึกแล้ว');
-    } },
-  });
+  let deep = false; // โหมดคิดลึก: กลับเป็นปกติทุกครั้งที่เปิดหน้าแชต จะได้ไม่เปลืองโดยไม่รู้ตัว
+  const composer = createComposer({ placeholder: 'พิมพ์คุยกับตัวเอง…', onSubmit: (viaKey) => onSubmit(viaKey) });
   const { input } = composer;
   const toEnd = h('button', { class: 'toend', title: 'ไปล่างสุด', hidden: true, onclick: () => toBottom(true) }, iconEl('down'));
   root.append(h('div', { class: 'msgwrap' }, list, toEnd), composer.el);
@@ -48,9 +41,20 @@ export async function renderChat(root, { id }, ctx) {
   keepBottomOnResize(list);
   list.addEventListener('scroll', () => { toEnd.hidden = list.scrollHeight - list.scrollTop - list.clientHeight < 300; }, { passive: true });
 
+  // เมนูเลือกโหมด (แบบ Gemini): ปกติ = โมเดลหลัก · คิดลึก = โมเดลคิดลึก + คิดเต็มที่ + บังคับโต้แย้ง
+  async function pickMode(anchor) {
+    const s = await getSettings();
+    const same = !s.deepModel || s.deepModel === s.model;
+    const set = (on) => () => { deep = on; setHeader(); };
+    popMenu(anchor, [
+      { label: 'ปกติ', sub: 'เร็ว ประหยัด สำหรับคุยทั่วไป', checked: !deep, onClick: set(false) },
+      { label: 'คิดลึก', sub: same ? 'คิดละเอียดกว่า ตอบช้ากว่า (ตั้งโมเดลที่เก่งกว่าได้ในตั้งค่า)' : 'โมเดลเก่งกว่า คิดละเอียด ตอบช้าและแพงกว่า ใช้กับเรื่องสำคัญ', checked: deep, onClick: set(true) },
+    ], { align: 'left' });
+  }
+
   // ---------- แถบบน ----------
   function setHeader() {
-    ctx.setTitle(chat.isNew ? 'Twin' : chat.title);
+    ctx.setTitle(h('button', { class: `picker${deep ? ' deep' : ''}`, title: 'เลือกโหมดการตอบ', onclick: (e) => pickMode(e.currentTarget) }, deep ? 'คิดลึก' : 'ปกติ', iconEl('caret')));
     const more = h('button', { class: 'round flat', title: 'เพิ่มเติม', onclick: () => popMenu(more, [
       { label: 'เปลี่ยนชื่อแชต', icon: 'pencil', onClick: async () => {
         const t = prompt('ชื่อแชต', chat.title);

@@ -3,17 +3,11 @@
 import { h, iconEl } from './ui.js';
 
 // onSubmit(viaEnterKey) · บนมือถือ Enter = ขึ้นบรรทัดใหม่ · บนคอมกด Enter ส่ง (Shift+Enter ขึ้นบรรทัด)
-// toggle = { label, title, onChange(on) } ถ้าใส่ จะมีปุ่มสลับเปิด/ปิดในช่องพิมพ์ (เช่น "คิดลึก")
-export function createComposer({ placeholder, onSubmit, toggle }) {
+export function createComposer({ placeholder, onSubmit }) {
   const input = h('textarea', { rows: 1, placeholder, enterKeyHint: 'enter' });
   const sendBtn = h('button', { class: 'send', title: 'ส่ง' }, iconEl('send', 'ico'));
-  const tgBtn = toggle && h('button', { class: 'tg', type: 'button', title: toggle.title || toggle.label, 'aria-pressed': 'false', onclick: () => {
-    const on = tgBtn.getAttribute('aria-pressed') !== 'true';
-    tgBtn.setAttribute('aria-pressed', String(on));
-    toggle.onChange(on);
-  } }, toggle.label);
   const notice = h('div', { class: 'cnotice', hidden: true });
-  const el = h('div', { class: 'composer' }, notice, h('div', { class: 'pill' }, input, tgBtn, sendBtn));
+  const el = h('div', { class: 'composer' }, notice, h('div', { class: 'pill' }, input, sendBtn));
 
   const autosize = () => {
     input.style.height = 'auto';
