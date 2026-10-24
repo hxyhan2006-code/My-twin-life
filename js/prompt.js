@@ -1,6 +1,6 @@
 // สร้างคำสั่งหลัก (system prompt) ให้ twin พูดเป็น "เรา" ที่ฉลาดกว่า
 
-export function buildSystem({ name = 'Han', core = '', style = '', samples = [], retrieved = [], deep = false, now = new Date() }) {
+export function buildSystem({ name = 'Han', core = '', style = '', samples = [], retrieved = [], goals = [], deep = false, now = new Date() }) {
   const date = now.toLocaleString('th-TH', { dateStyle: 'full', timeStyle: 'short' });
   const parts = [];
   parts.push(
@@ -26,6 +26,7 @@ export function buildSystem({ name = 'Han', core = '', style = '', samples = [],
         `- ก่อนเห็นด้วยกับมุมไหน ให้หาข้อโต้แย้งที่แรงที่สุดของมุมนั้น แล้วบอกตรงๆ ถ้าข้อโต้แย้งชนะ ห้ามเออออเพื่อให้อีกฝ่ายสบายใจ`,
         `- ชี้อคติหรือแพทเทิร์นของ ${name} ที่เห็นจากข้อมูล เฉพาะที่มีหลักฐาน ไม่เดา`,
         `- เสนอทางเลือกอย่างน้อย 2 ทาง พร้อมข้อดี ข้อเสีย ความเสี่ยง แล้วเลือกให้ 1 ทางพร้อมเหตุผล`,
+        `- เทียบแต่ละทางเลือกกับเป้าหมายที่ตั้งไว้ (ถ้ามี) ว่าเข้าใกล้หรือไกลออกไป`,
         `- จบด้วยสิ่งที่ทำได้ทันที 1–3 ข้อ`,
         `- ยังพูดเป็นเสียงของ ${name} กระชับ อ่านบนมือถือได้ ไม่ใส่หัวข้อเยอะเกินจำเป็น`,
       ].join('\n'),
@@ -38,6 +39,13 @@ export function buildSystem({ name = 'Han', core = '', style = '', samples = [],
   }
   if (samples.length) {
     parts.push(`## ตัวอย่างข้อความจริงที่ ${name} พิมพ์ (ดูน้ำเสียง ไม่ต้องก๊อปประโยค)\n${samples.map((x) => `- ${x.replace(/\n+/g, ' / ')}`).join('\n')}`);
+  }
+  if (goals.length) {
+    parts.push(
+      `## เป้าหมายที่ ${name} ตั้งไว้ (ยังทำอยู่)\n${goals.map((g) => `- ${g}`).join('\n')}\n` +
+        `ใช้ตอนวางแผนหรือตัดสินใจ: เทียบกับเป้าหมายเหล่านี้ และบอกตรงๆ ถ้าสิ่งที่กำลังจะทำเบี่ยงจากหรือขัดกับเป้าหมาย ห้ามเอาเป้าหมายมาพูดซ้ำทุกข้อความ ` +
+        `ถ้าเรื่องที่คุยเกี่ยวกับเป้าหมายที่มี [ไม่ได้อัปเดต] ให้ถามความคืบหน้าสั้นๆ ได้หนึ่งครั้ง`,
+    );
   }
   if (retrieved.length) {
     parts.push(`## รายละเอียดที่เกี่ยวกับเรื่องที่กำลังคุย\n${retrieved.map((r) => `- ${r.replace(/\n+/g, ' / ')}`).join('\n')}`);

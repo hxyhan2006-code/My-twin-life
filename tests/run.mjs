@@ -8,6 +8,7 @@ import { createTypewriter } from '../js/typewriter.js';
 import { buildInterviewerSystem, parseInterviewerReply } from '../js/interviewer.js';
 import { summarize, addToDays, levelOf, costOf, fmtUsd, fmtThb, dayKey } from '../js/usage.js';
 import { normalizeMemories } from '../js/profile.js';
+import { goalsForPrompt } from '../js/goals.js';
 import { collectWriting, clampTexts, pickSamples } from '../js/style.js';
 
 let n = 0;
@@ -63,6 +64,22 @@ t('buildSystem ใส่สไตล์การพูดและตัวอ�
 t('buildSystem โหมดคิดลึก: มีกฎโต้แย้งก่อนเห็นด้วย เฉพาะตอนเปิด', () => {
   assert.ok(buildSystem({ name: 'Han', deep: true }).includes('ห้ามเออออ'));
   assert.ok(!buildSystem({ name: 'Han' }).includes('โหมดคิดลึก'));
+});
+
+t('เป้าหมาย: ส่งเฉพาะที่ active + กรอบเวลา + เตือนเมื่อไม่ได้อัปเดตเกิน 14 วัน และ buildSystem ใส่ให้', () => {
+  const now = 100 * 864e5;
+  const goals = [
+    { text: 'เก็บเงิน 1 แสน', when: 'ก่อนสิ้นปี', status: 'active', createdAt: now - 20 * 864e5, updatedAt: now - 20 * 864e5 },
+    { text: 'ออกกำลังกาย', status: 'active', createdAt: now, updatedAt: now - 1 * 864e5 },
+    { text: 'เรียนจบ', status: 'done', createdAt: 0, updatedAt: 0 },
+  ];
+  const lines = goalsForPrompt(goals, now);
+  assert.equal(lines.length, 2);
+  assert.ok(lines[0].includes('ก่อนสิ้นปี') && lines[0].includes('ไม่ได้อัปเดต 20 วัน'));
+  assert.ok(!lines[1].includes('ไม่ได้อัปเดต'));
+  const s = buildSystem({ name: 'Han', goals: lines });
+  assert.ok(s.includes('เก็บเงิน 1 แสน') && s.includes('ห้ามเอาเป้าหมายมาพูดซ้ำ'));
+  assert.ok(!buildSystem({ name: 'Han' }).includes('เป้าหมายที่'));
 });
 
 t('collectWriting รวมข้อความของเราจากแชต+คำตอบสัมภาษณ์ เรียงเวลา ไม่เอาของ AI', () => {

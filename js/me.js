@@ -4,6 +4,7 @@ import { getAll } from './db.js';
 import { GROUPS, BASE_QUESTIONS, groupById, groupOfCat } from './questions.js';
 import { getSettings } from './state.js';
 import { h, iconEl } from './ui.js';
+import { loadGoals } from './goals.js';
 
 const row = (href, icon, title, sub) =>
   h('a', { class: 'row', href },
@@ -19,6 +20,7 @@ export async function renderMe(root, _p, ctx) {
   for (const a of answers) count[groupOfCat(a.category)]++;
   for (const m of mems) count[groupById(m.group) ? m.group : 'other']++;
 
+  const activeGoals = (await loadGoals()).filter((g) => g.status === 'active').length;
   const unchecked = mems.filter((m) => m.source === 'chat' && !m.reviewed).length;
 
   const page = h('div', { class: 'page' });
@@ -30,6 +32,7 @@ export async function renderMe(root, _p, ctx) {
     h('h3', {}, 'Twin ของฉัน'),
     h('div', { class: 'card' },
       row('#/brain/core', 'gem', 'แก่นตัวตน', 'ตัวตนหลักที่ twin อ่านทุกครั้งที่คุย'),
+      row('#/brain/goals', 'flag', 'เป้าหมายและแผน', activeGoals ? `กำลังทำ ${activeGoals} เรื่อง` : 'บอก twin ว่าเราอยากไปทางไหน'),
       row('#/brain/style', 'chat', 'สไตล์การพูดของเรา', 'AI เรียนรู้วิธีพูดและวิธีคิดจากที่เราพิมพ์จริง'),
       row('#/interview', 'askchat', 'สัมภาษณ์', 'ตอบคำถามเพื่อให้ twin รู้จักเรามากขึ้น'),
       row('#/brain/chatmem', 'check', 'ตรวจที่จำจากแชต', unchecked ? `รอตรวจ ${unchecked} เรื่อง` : 'ดูว่า AI จดอะไรจากที่เราคุย')),
