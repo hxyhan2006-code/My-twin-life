@@ -34,6 +34,7 @@ const svg = (d) =>
 export const icons = {
   menu: svg('<path d="M4 9h16M4 15h10"/>'),
   newChat: svg('<path d="M12 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-6"/><path d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4z"/>'),
+  close: svg('<path d="M6 6l12 12M18 6L6 18"/>'),
   pencil: svg('<path d="M17 3a2.85 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5z"/>'),
   copy: svg('<rect x="8" y="8" width="14" height="14" rx="3"/><path d="M4 16c-1.1 0-2-.9-2-2V5a3 3 0 013-3h9c1.1 0 2 .9 2 2"/>'),
   retry: svg('<path d="M21 12a9 9 0 01-15.5 6.2L3 16"/><path d="M3 12A9 9 0 0118.5 5.8L21 8"/><path d="M21 3v5h-5"/><path d="M3 21v-5h5"/>'),

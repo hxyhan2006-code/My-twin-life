@@ -93,21 +93,22 @@ export async function renderChat(root, { id }, ctx) {
     toBottom();
   }
 
+  // แก้ข้อความ: ดึงข้อความมาใส่ช่องพิมพ์ด้านล่าง (มีแถบ "กำลังแก้ไข") กดส่ง = ตัดข้อความนี้และที่ตามหลังทิ้งแล้วตอบใหม่
+  let editing = null;
+  function stopEdit() {
+    editing = null;
+    list.querySelector('.umsg.editing')?.classList.remove('editing');
+    composer.setNotice(null);
+  }
   function editUser(m, wrap) {
     if (sending) return toast('รอให้ตอบเสร็จก่อน');
-    const holder = wrap.parentElement;
-    const ta = h('textarea', { class: 'big', rows: 3, value: m.content });
-    const box = h('div', { class: 'msg user' }, h('div', { class: 'editbox' }, ta, h('div', { class: 'btns small' },
-      h('button', { class: 'link', onclick: () => box.replaceWith(holder) }, 'ยกเลิก'),
-      h('button', { class: 'link', onclick: () => {
-        const t = ta.value.trim();
-        if (!t) return;
-        chat.messages.length = chat.messages.indexOf(m); // ตัดข้อความนี้และที่ตามหลังทิ้ง แล้วส่งใหม่
-        renderMessages();
-        send(t);
-      } }, 'ส่งใหม่'))));
-    holder.replaceWith(box);
-    ta.focus();
+    stopEdit();
+    editing = m;
+    wrap.parentElement.classList.add('editing');
+    composer.setNotice('กำลังแก้ไขข้อความ · ส่งแล้วจะตอบใหม่จากจุดนี้', () => { stopEdit(); composer.clear(); });
+    input.value = m.content;
+    composer.autosize();
+    input.focus();
   }
 
   async function showEmpty() {
@@ -250,7 +251,13 @@ export async function renderChat(root, { id }, ctx) {
       return;
     }
     const t = input.value.trim();
-    if (!sending && t) send(t);
+    if (sending || !t) return;
+    if (editing) {
+      chat.messages.length = chat.messages.indexOf(editing);
+      stopEdit();
+      renderMessages();
+    }
+    send(t);
   }
 
   setHeader();

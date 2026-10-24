@@ -6,7 +6,8 @@ import { h, iconEl } from './ui.js';
 export function createComposer({ placeholder, onSubmit }) {
   const input = h('textarea', { rows: 1, placeholder, enterKeyHint: 'enter' });
   const sendBtn = h('button', { class: 'send', title: 'ส่ง' }, iconEl('send', 'ico'));
-  const el = h('div', { class: 'composer' }, h('div', { class: 'pill' }, input, sendBtn));
+  const notice = h('div', { class: 'cnotice', hidden: true });
+  const el = h('div', { class: 'composer' }, notice, h('div', { class: 'pill' }, input, sendBtn));
 
   const autosize = () => {
     input.style.height = 'auto';
@@ -24,6 +25,13 @@ export function createComposer({ placeholder, onSubmit }) {
   return {
     el, input, sendBtn, autosize,
     clear() { input.value = ''; autosize(); },
+    // แถบเหนือช่องพิมพ์ เช่น "กำลังแก้ไขข้อความ" พร้อมปุ่มปิด · ไม่ส่ง text = ซ่อนแถบ
+    setNotice(text, onClose) {
+      notice.hidden = !text;
+      notice.replaceChildren();
+      if (!text) return;
+      notice.append(iconEl('pencil', 'ico sm'), h('span', { class: 'grow' }, text), h('button', { class: 'x', title: 'ยกเลิก', onclick: onClose }, iconEl('close')));
+    },
     setBusy(busy) {
       sendBtn.innerHTML = '';
       sendBtn.append(iconEl(busy ? 'stop' : 'send', 'ico'));
