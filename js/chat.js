@@ -19,10 +19,13 @@ import { h, toast, iconEl, popMenu, copyText, fadeTail, keepBottomOnResize } fro
 
 const HISTORY = 20; // ส่งข้อความล่าสุดกี่ข้อความให้ AI
 const MEMORIZE_EVERY = 4; // ทุกกี่ข้อความของเรา ให้ AI ดึงความจำใหม่
+// [ไอคอน, ข้อความบนปุ่ม, ข้อความที่ใส่ในช่องพิมพ์ (ถ้าต่างจากบนปุ่ม)]
 const STARTERS = [
   ['bulb', 'ช่วยคิดเรื่องที่กำลังลังเล'],
   ['book', 'ทบทวนวันนี้ของเรา'],
   ['calendar', 'วางแผนสัปดาห์นี้'],
+  ['check', 'สรุปสัปดาห์ที่ผ่านมา',
+    'สรุปสัปดาห์ที่ผ่านมาของเรา จากเช็กอินกับเป้าหมาย: 1) ทำตามที่พูดไว้ได้แค่ไหน ยกตัวเลขจริง 2) จุดที่คำพูดขัดกับสิ่งที่ทำ 3) สัปดาห์หน้าควรทำ 3 อย่างอะไร ที่ทำได้จริง · ถ้าเช็กอินน้อยกว่า 4 วัน ให้บอกก่อนว่าข้อมูลไม่พอจะสรุปได้แม่น'],
 ];
 
 export async function renderChat(root, { id }, ctx) {
@@ -32,6 +35,7 @@ export async function renderChat(root, { id }, ctx) {
 
   const list = h('div', { class: 'msgs' });
   let deep = false; // โหมดคิดลึก: กลับเป็นปกติทุกครั้งที่เปิดหน้าแชต จะได้ไม่เปลืองโดยไม่รู้ตัว
+  let web = false; // ค้นเว็บ: ปิดทุกครั้งที่เปิดหน้าแชตเหมือนกัน (คิดเงินเพิ่มต่อข้อความ)
   // ใครตอบ: แชตเก่าที่ไม่มีค่านี้ = 'self' (สร้างตอนยังมีแค่โหมดตัวเอง) · แชตใหม่ = โหมดที่เลือกล่าสุด (ครั้งแรก = ผู้ช่วย)
   if (!PERSONAS[chat.persona]) chat.persona = chat.isNew ? await kvGet('persona', 'assistant') : 'self';
   if (!PERSONAS[chat.persona]) chat.persona = 'assistant';
@@ -68,12 +72,15 @@ export async function renderChat(root, { id }, ctx) {
       { header: 'ระดับการคิด' },
       { label: 'ปกติ', sub: 'เร็ว ประหยัด สำหรับคุยทั่วไป', checked: !deep, onClick: set(false) },
       { label: 'คิดลึก', sub: same ? 'คิดละเอียดกว่า ตอบช้ากว่า (ตั้งโมเดลที่เก่งกว่าได้ในตั้งค่า)' : 'โมเดลเก่งกว่า คิดละเอียด ตอบช้าและแพงกว่า ใช้กับเรื่องสำคัญ', checked: deep, onClick: set(true) },
+      { divider: true },
+      { header: 'เครื่องมือ' },
+      { label: 'ค้นเว็บ', sub: 'หาข้อมูลล่าสุด (ราคา ข่าว เทรนด์) · คิดเงินเพิ่มราว 0.3-0.5 บาทต่อข้อความ', checked: web, onClick: () => { web = !web; setHeader(); } },
     ], { align: 'left' });
   }
 
   // ---------- แถบบน ----------
   function setHeader() {
-    ctx.setTitle(h('button', { class: `picker${deep ? ' deep' : ''}`, title: 'เลือกโหมดการตอบ', onclick: (e) => pickMode(e.currentTarget) }, PERSONAS[chat.persona].label, deep && h('small', {}, ' คิดลึก'), iconEl('caret')));
+    ctx.setTitle(h('button', { class: `picker${deep ? ' deep' : ''}`, title: 'เลือกโหมดการตอบ', onclick: (e) => pickMode(e.currentTarget) }, PERSONAS[chat.persona].label, (deep || web) && h('small', {}, ' ' + [deep && 'คิดลึก', web && 'ค้นเว็บ'].filter(Boolean).join(' · ')), iconEl('caret')));
     const more = h('button', { class: 'round flat', title: 'เพิ่มเติม', onclick: () => popMenu(more, [
       { label: 'เปลี่ยนชื่อแชต', icon: 'pencil', onClick: async () => {
         const t = prompt('ชื่อแชต', chat.title);
@@ -113,6 +120,10 @@ export async function renderChat(root, { id }, ctx) {
     const acts = h('div', { class: 'actions' }, actionBtn('copy', 'คัดลอก', () => copyText(m.content)));
     if (retry) acts.append(actionBtn('retry', 'ลองใหม่', () => regen(), 'act-retry'));
     if (m.content) el.append(acts);
+    if (m.sources && m.sources.length) {
+      el.append(h('details', { class: 'used' }, h('summary', {}, `แหล่งข้อมูลจากเว็บ ${m.sources.length} ลิงก์`),
+        m.sources.map((s) => h('p', {}, h('a', { href: s.url, target: '_blank', rel: 'noopener noreferrer' }, s.title || s.url)))));
+    }
     if (m.used && m.used.length) {
       el.append(h('details', { class: 'used' }, h('summary', {}, `ใช้ความจำ ${m.used.length} ชิ้น`), m.used.map((u) => h('p', {}, u))));
     }
@@ -155,8 +166,8 @@ export async function renderChat(root, { id }, ctx) {
     }
     if (!checkins[dateKey()]) box.append(h('a', { class: 'banner', href: '#/brain/checkin' }, 'วันนี้ยังไม่ได้เช็กอิน (3 คำถามสั้นๆ) — แตะเพื่อตอบ'));
     box.append(h('h2', {}, 'เริ่มจากไหนดี'));
-    for (const [icon, text] of STARTERS) {
-      box.append(h('button', { class: 'starter', onclick: () => { input.value = text + ' '; input.focus(); composer.autosize(); } }, iconEl(icon, 'ico lead sm'), text));
+    for (const [icon, text, fill = text] of STARTERS) {
+      box.append(h('button', { class: 'starter', onclick: () => { input.value = fill + ' '; input.focus(); composer.autosize(); } }, iconEl(icon, 'ico lead sm'), text));
     }
     list.append(box);
   }
@@ -225,11 +236,12 @@ export async function renderChat(root, { id }, ctx) {
     ];
     const used = rank(query, pool).map((r) => r.it.text);
     const isDeep = deep;
-    const system = buildSystem({ name: s.userName, persona: chat.persona, core, style, samples, retrieved: used, goals: goalsForPrompt(goals), checkins: checkinsForPrompt(checkins), finance, instructions: instructionsForPrompt(instr), deep: isDeep });
+    const isWeb = web;
+    const system = buildSystem({ name: s.userName, persona: chat.persona, core, style, samples, retrieved: used, goals: goalsForPrompt(goals), checkins: checkinsForPrompt(checkins), finance, instructions: instructionsForPrompt(instr), deep: isDeep, web: isWeb });
     const history = chat.messages.filter((m) => !m.error).slice(-HISTORY).map(({ role, content }) => ({ role, content }));
 
     const ai = { role: 'assistant', content: '', used, ts: Date.now() };
-    const body = h('div', { class: 'md' }, h('span', { class: 'pulse' }), isDeep && h('small', { class: 'hint' }, ' กำลังคิดลึก อาจรอสักพัก…'));
+    const body = h('div', { class: 'md' }, h('span', { class: 'pulse' }), (isDeep || isWeb) && h('small', { class: 'hint' }, isDeep ? ' กำลังคิดลึก อาจรอสักพัก…' : ' กำลังค้นเว็บ อาจรอสักพัก…'));
     const el = h('div', { class: 'msg ai' }, body);
     list.append(el);
     toBottom();
@@ -249,9 +261,10 @@ export async function renderChat(root, { id }, ctx) {
     try {
       ai.content = await chatStream({
         apiKey: s.apiKey, model: isDeep ? s.deepModel : s.model, signal: current.abort.signal,
-        extra: isDeep ? { reasoning: { effort: 'high' } } : {},
+        extra: { ...(isDeep && { reasoning: { effort: 'high' } }), ...(isWeb && { plugins: [{ id: 'web', max_results: 5 }] }) },
         messages: [{ role: 'system', content: system }, ...history],
         onDelta: (full) => { ai.content = full; tw.push(full); },
+        onSources: (list) => { ai.sources = list; },
       });
     } catch (e) {
       err = e.name === 'AbortError' ? '' : e.message;

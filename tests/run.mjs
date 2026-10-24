@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { rank, grams } from '../js/retrieve.js';
 import { buildSystem, extractJson } from '../js/prompt.js';
+import { extractSources } from '../js/api.js';
 import { dateKey, checkinsForPrompt, describeEntry } from '../js/checkin.js';
 import { mdToHtml } from '../js/md.js';
 import { BASE_QUESTIONS, CATEGORIES, GROUPS, groupOfCat } from '../js/questions.js';
@@ -93,6 +94,23 @@ t('buildSystem ใส่เช็กอินเมื่อมี (ทั้ง
     assert.ok(s.includes('เช็กอินรายวันของ Han') && s.includes('ตื่น 09:30') && s.includes('ห้ามเดาเรื่องวันที่ไม่ได้เช็กอิน'));
     assert.ok(!buildSystem({ name: 'Han', persona }).includes('เช็กอินรายวัน'));
   }
+});
+
+t('extractSources: ดึงลิงก์จาก annotations ทั้งสองรูปแบบ ข้ามของที่ไม่ใช่ลิงก์เว็บ', () => {
+  const got = extractSources({ delta: { annotations: [
+    { type: 'url_citation', url_citation: { url: 'https://a.com/x', title: 'A' } },
+    { type: 'url_citation', url: 'https://b.com', title: 'B' },
+    { type: 'url_citation', url_citation: { url: 'javascript:alert(1)', title: 'bad' } },
+    { type: 'file', url: 'https://c.com' },
+  ] } });
+  assert.deepEqual(got, [{ url: 'https://a.com/x', title: 'A' }, { url: 'https://b.com', title: 'B' }]);
+  assert.deepEqual(extractSources(undefined), []);
+  assert.deepEqual(extractSources({ delta: { content: 'hi' } }), []);
+});
+
+t('buildSystem ค้นเว็บ: ใส่คำสั่งเฉพาะตอนเปิด', () => {
+  assert.ok(buildSystem({ name: 'Han', web: true }).includes('เปิดค้นเว็บอยู่'));
+  assert.ok(!buildSystem({ name: 'Han' }).includes('เปิดค้นเว็บอยู่'));
 });
 
 t('buildSystem โหมดผู้ช่วย: พูดเป็นคนนอก เทียบคำพูดกับข้อมูล ไม่เลียนแบบ ไม่ใส่ตัวอย่างข้อความ', () => {

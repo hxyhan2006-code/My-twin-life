@@ -6,7 +6,7 @@ export const PERSONAS = {
   assistant: { label: 'ผู้ช่วย', sub: 'คนนอกที่รู้จักเรา ค้านตรงๆ ช่วยวางแผน' },
 };
 
-export function buildSystem({ name = 'Han', persona = 'self', core = '', style = '', samples = [], retrieved = [], goals = [], checkins = [], finance = '', instructions = [], deep = false, now = new Date() }) {
+export function buildSystem({ name = 'Han', persona = 'self', core = '', style = '', samples = [], retrieved = [], goals = [], checkins = [], finance = '', instructions = [], deep = false, web = false, now = new Date() }) {
   const date = now.toLocaleString('th-TH', { dateStyle: 'full', timeStyle: 'short' });
   const asst = persona === 'assistant';
   const parts = [];
@@ -59,6 +59,7 @@ export function buildSystem({ name = 'Han', persona = 'self', core = '', style =
     );
   }
   parts.push(`ตอนนี้คือ ${date}`);
+  if (web) parts.push('ตอนนี้เปิดค้นเว็บอยู่ ใช้ผลค้นกับข้อเท็จจริงที่เปลี่ยนเร็ว (ราคา ข่าว กฎ เทรนด์) และบอกว่าข้อมูลมาจากการค้นเว็บ ถ้าค้นไม่เจอหรือผลขัดกันให้บอกตรงๆ ห้ามแต่งตัวเลขหรือแหล่งที่มา');
   parts.push(`## ข้อมูลตัวตนของ ${name} (แก่นตัวตน)\n${core.trim() || '(ยังไม่มีข้อมูล ให้ถามเขาเพิ่มเมื่อจำเป็น และบอกว่าควรไปทำสัมภาษณ์ในแอพ)'}`);
   if (style.trim()) {
     parts.push(asst

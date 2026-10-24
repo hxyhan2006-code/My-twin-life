@@ -225,3 +225,4 @@ textarea.big { resize: none; }
 .chips[hidden] { display: none; }
 .chips.scroll .chip { max-width: 78%; white-space: normal; text-align: left; line-height: 1.35; padding: 10px 16px; }
 .round.solo { background: var(--pill); width: 46px; }
+details.used a { color: #aebcff; text-decoration: underline; }

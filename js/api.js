@@ -56,14 +56,27 @@ export async function chatOnce({ apiKey, model, messages, temperature = 0.4, max
   return j.choices?.[0]?.message?.content || '';
 }
 
-// ถามแบบทยอยส่งตัวอักษรมาเรื่อยๆ (ใช้ในหน้าแชต)
-export async function chatStream({ apiKey, model, messages, temperature = 0.8, signal, onDelta, extra = {} }) {
+// ดึงลิงก์แหล่งข้อมูลจากผลค้นเว็บ (OpenRouter ส่งเป็น annotations แบบ url_citation) รองรับทั้งในก้อน delta และ message
+export function extractSources(choice) {
+  const list = [...(choice?.delta?.annotations || []), ...(choice?.message?.annotations || [])];
+  const out = [];
+  for (const a of list) {
+    if (a?.type && a.type !== 'url_citation') continue;
+    const c = a?.url_citation || a;
+    if (c?.url && /^https?:[/][/]/i.test(c.url)) out.push({ url: c.url, title: String(c.title || '').slice(0, 120) });
+  }
+  return out;
+}
+
+// ถามแบบทยอยส่งตัวอักษรมาเรื่อยๆ (ใช้ในหน้าแชต) · onSources(รายการลิงก์) ถ้ามีผลค้นเว็บ
+export async function chatStream({ apiKey, model, messages, temperature = 0.8, signal, onDelta, onSources, extra = {} }) {
   const res = await post({ model, messages, temperature, stream: true, usage: { include: true }, ...extra }, apiKey, signal);
   const reader = res.body.getReader();
   const dec = new TextDecoder();
   let buf = '';
   let full = '';
   let usage = null;
+  const seen = new Map();
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -81,9 +94,11 @@ export async function chatStream({ apiKey, model, messages, temperature = 0.8, s
       if (j.usage) usage = j.usage;
       const d = j.choices?.[0]?.delta?.content;
       if (d) { full += d; onDelta(full); }
+      for (const s of extractSources(j.choices?.[0])) if (!seen.has(s.url)) seen.set(s.url, s);
     }
   }
   if (usage) usageSink?.(model, usage);
+  if (seen.size) onSources?.([...seen.values()]);
   if (!full.trim()) throw new Error('โมเดลไม่ตอบอะไรกลับมา ลองใหม่หรือเปลี่ยนโมเดล');
   return full;
 }
