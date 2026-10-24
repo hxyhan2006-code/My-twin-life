@@ -6,10 +6,12 @@ import { getSettings, needsSetup } from './state.js';
 import { CATEGORIES, groupById, groupOfCat } from './questions.js';
 import { answerRow, memoryRow } from './rows.js';
 import { h, toast, iconEl } from './ui.js';
+import { learnStyle, STYLE_EVERY } from './style.js';
 
 export async function renderBrain(root, { id }, ctx) {
   if (id === 'core') return renderCore(root, ctx);
   if (id === 'chatmem') return renderChatMemories(root, ctx);
+  if (id === 'style') return renderStyle(root, ctx);
   const g = groupById(id);
   if (!g) return ctx.go('#/me');
   return renderGroup(root, g, ctx);
@@ -53,6 +55,52 @@ async function renderCore(root, ctx) {
     ta, status, prog, h('div', { class: 'btns' }, saveBtn, gen),
     h('p', { class: 'hint' }, `ใช้คำตอบ ${answers.length} ข้อ · การสร้างจะเรียก AI หลายครั้งถ้าคำตอบเยอะ มีค่าใช้จ่าย API เล็กน้อย`),
   );
+}
+
+// สไตล์การพูด/วิธีคิดที่ AI เรียนรู้จากที่เราพิมพ์จริง: แก้ได้ · ลบตัวอย่างได้ · สั่งวิเคราะห์เองได้
+async function renderStyle(root, ctx) {
+  ctx.setTitle('สไตล์การพูดของเรา');
+  ctx.setRight(null);
+  const page = h('div', { class: 'page' });
+  root.append(page);
+  const [style, at, samples] = await Promise.all([kvGet('styleProfile', ''), kvGet('styleAt', 0), kvGet('styleSamples', [])]);
+  const ta = h('textarea', { class: 'big tall', value: style, placeholder: `ยังว่างอยู่ — คุยกับ twin ไปครบ ${STYLE_EVERY} ข้อความ AI จะเขียนให้เอง หรือกด "วิเคราะห์ตอนนี้"` });
+  const status = h('small', { class: 'hint' }, at ? `วิเคราะห์ถึงข้อความเมื่อ ${new Date(at).toLocaleString('th-TH')}` : '');
+  const saveBtn = h('button', { class: 'btn ghost', onclick: async () => { await kvSet('styleProfile', ta.value.trim()); toast('บันทึกแล้ว'); } }, 'บันทึกที่แก้');
+  const runBtn = h('button', { class: 'btn primary', onclick: async () => {
+    const s = await getSettings();
+    const warn = needsSetup(s);
+    if (warn) return toast(warn);
+    runBtn.disabled = true;
+    try {
+      const ok = await learnStyle(s, { force: true });
+      toast(ok ? 'วิเคราะห์เสร็จแล้ว' : 'ยังไม่มีข้อความใหม่ให้วิเคราะห์');
+      if (ok) { root.innerHTML = ''; return renderStyle(root, ctx); }
+    } catch (e) {
+      toast(e.message, 5000);
+    }
+    runBtn.disabled = false;
+  } }, 'วิเคราะห์ตอนนี้');
+  page.append(
+    h('p', { class: 'hint' }, 'AI อ่านข้อความที่เราพิมพ์จริง (แชต + คำตอบสัมภาษณ์) แล้วสรุปวิธีพูดและวิธีคิดของเรา twin อ่านส่วนนี้ทุกครั้งที่คุย อ่านแล้วตรงไหนไม่ใช่เรา แก้ตรงนี้ได้เลย'),
+    ta, status, h('div', { class: 'btns' }, saveBtn, runBtn),
+    h('p', { class: 'hint' }, `วิเคราะห์อัตโนมัติทุกๆ ${STYLE_EVERY} ข้อความใหม่ · ใช้โมเดลเบา มีค่าใช้จ่าย API เล็กน้อย`),
+  );
+  if (samples.length) {
+    const list = h('div', { class: 'card' });
+    const drawSamples = () => {
+      list.innerHTML = '';
+      samples.forEach((t, i) => list.append(h('div', { class: 'row col' },
+        h('p', { class: 'ans' }, t),
+        h('div', { class: 'btns small' }, h('button', { class: 'link danger', onclick: async () => {
+          samples.splice(i, 1);
+          await kvSet('styleSamples', samples);
+          drawSamples();
+        } }, 'ลบ')))));
+    };
+    drawSamples();
+    page.append(h('h3', {}, `ตัวอย่างข้อความจริงที่ twin เห็น (${samples.length})`), list);
+  }
 }
 
 // ตรวจสิ่งที่ AI จดจากแชตเอง: กด "ถูกต้อง" = ตรวจแล้ว (เก็บ m.reviewed) · แก้/ลบ/ย้ายหมวดได้เหมือนหน้าหมวด

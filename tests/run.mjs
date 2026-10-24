@@ -8,6 +8,7 @@ import { createTypewriter } from '../js/typewriter.js';
 import { buildInterviewerSystem, parseInterviewerReply } from '../js/interviewer.js';
 import { summarize, addToDays, levelOf, costOf, fmtUsd, fmtThb, dayKey } from '../js/usage.js';
 import { normalizeMemories } from '../js/profile.js';
+import { collectWriting, clampTexts, pickSamples } from '../js/style.js';
 
 let n = 0;
 const t = (name, fn) => { fn(); n++; console.log('ok -', name); };
@@ -50,6 +51,28 @@ t('buildSystem ใส่ชื่อ แก่นตัวตน และคว
   assert.ok(s.includes('ห้ามประจบ') && s.includes('ห้ามแต่งความทรงจำ'));
   assert.ok(!s.includes('บรรทัดสอง\n- '), 'ความจำต้องเป็นบรรทัดเดียว');
   assert.ok(buildSystem({}).includes('ยังไม่มีข้อมูล'));
+});
+
+t('buildSystem ใส่สไตล์การพูดและตัวอย่างข้อความจริง (ถ้าไม่มีก็ไม่ขึ้นหัวข้อ)', () => {
+  const s = buildSystem({ name: 'Han', style: 'ลงท้ายด้วย นะ บ่อย', samples: ['เออ ก็ได้\nนะ'] });
+  assert.ok(s.includes('ลงท้ายด้วย นะ บ่อย') && s.includes('- เออ ก็ได้ / นะ'));
+  const none = buildSystem({ name: 'Han' });
+  assert.ok(!none.includes('เรียนรู้จากที่เขาพิมพ์จริง') && !none.includes('ตัวอย่างข้อความจริง'));
+});
+
+t('collectWriting รวมข้อความของเราจากแชต+คำตอบสัมภาษณ์ เรียงเวลา ไม่เอาของ AI', () => {
+  const chats = [{ updatedAt: 5, messages: [{ role: 'user', content: 'ก', ts: 3 }, { role: 'assistant', content: 'ไม่เอา', ts: 4 }] }];
+  const answers = [{ answer: 'ข', updatedAt: 1 }, { answer: '', updatedAt: 2 }];
+  assert.deepEqual(collectWriting(chats, answers).map((x) => x.text), ['ข', 'ก']);
+});
+
+t('clampTexts ไม่เกินงบตัวอักษร และ pickSamples เลือกข้อความพอดี ไม่ซ้ำ ไม่เกิน 8', () => {
+  const many = Array.from({ length: 100 }, (_, i) => ({ ts: i, text: 'ข้อความทดสอบยาวพอสมควรลำดับที่ ' + i }));
+  assert.ok(clampTexts(many).length <= 60);
+  const big = [{ ts: 1, text: 'ก'.repeat(5000) }, { ts: 2, text: 'ข'.repeat(5000) }];
+  assert.ok(clampTexts(big).join('').length <= 9000);
+  const s = pickSamples([...many, { ts: 200, text: 'สั้น' }], ['ข้อความทดสอบยาวพอสมควรลำดับที่ 99']);
+  assert.ok(s.length <= 8 && new Set(s).size === s.length && !s.includes('สั้น'));
 });
 
 t('extractJson อ่านได้ทั้งแบบห่อข้อความและ ```', () => {

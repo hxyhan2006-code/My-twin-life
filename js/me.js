@@ -30,6 +30,7 @@ export async function renderMe(root, _p, ctx) {
     h('h3', {}, 'Twin ของฉัน'),
     h('div', { class: 'card' },
       row('#/brain/core', 'gem', 'แก่นตัวตน', 'ตัวตนหลักที่ twin อ่านทุกครั้งที่คุย'),
+      row('#/brain/style', 'chat', 'สไตล์การพูดของเรา', 'AI เรียนรู้วิธีพูดและวิธีคิดจากที่เราพิมพ์จริง'),
       row('#/interview', 'askchat', 'สัมภาษณ์', 'ตอบคำถามเพื่อให้ twin รู้จักเรามากขึ้น'),
       row('#/brain/chatmem', 'check', 'ตรวจที่จำจากแชต', unchecked ? `รอตรวจ ${unchecked} เรื่อง` : 'ดูว่า AI จดอะไรจากที่เราคุย')),
     h('h3', {}, 'สมองของ Twin'),

@@ -1,6 +1,6 @@
 // สร้างคำสั่งหลัก (system prompt) ให้ twin พูดเป็น "เรา" ที่ฉลาดกว่า
 
-export function buildSystem({ name = 'Han', core = '', retrieved = [], now = new Date() }) {
+export function buildSystem({ name = 'Han', core = '', style = '', samples = [], retrieved = [], now = new Date() }) {
   const date = now.toLocaleString('th-TH', { dateStyle: 'full', timeStyle: 'short' });
   const parts = [];
   parts.push(
@@ -20,6 +20,12 @@ export function buildSystem({ name = 'Han', core = '', retrieved = [], now = new
   );
   parts.push(`ตอนนี้คือ ${date}`);
   parts.push(`## ข้อมูลตัวตนของ ${name} (แก่นตัวตน)\n${core.trim() || '(ยังไม่มีข้อมูล ให้ถามเขาเพิ่มเมื่อจำเป็น และบอกว่าควรไปทำสัมภาษณ์ในแอพ)'}`);
+  if (style.trim()) {
+    parts.push(`## วิธีพูดและวิธีคิดของ ${name} (เรียนรู้จากที่เขาพิมพ์จริง) ให้พูดและคิดตามนี้\n${style.trim()}`);
+  }
+  if (samples.length) {
+    parts.push(`## ตัวอย่างข้อความจริงที่ ${name} พิมพ์ (ดูน้ำเสียง ไม่ต้องก๊อปประโยค)\n${samples.map((x) => `- ${x.replace(/\n+/g, ' / ')}`).join('\n')}`);
+  }
   if (retrieved.length) {
     parts.push(`## รายละเอียดที่เกี่ยวกับเรื่องที่กำลังคุย\n${retrieved.map((r) => `- ${r.replace(/\n+/g, ' / ')}`).join('\n')}`);
   }

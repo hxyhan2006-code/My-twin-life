@@ -6,6 +6,7 @@ import { rank } from './retrieve.js';
 import { buildSystem } from './prompt.js';
 import { mdToHtml } from './md.js';
 import { extractMemories } from './profile.js';
+import { learnStyle } from './style.js';
 import { createTypewriter } from './typewriter.js';
 import { createComposer } from './composer.js';
 import { getSettings, needsSetup } from './state.js';
@@ -182,7 +183,7 @@ export async function renderChat(root, { id }, ctx) {
     setHeader();
     toBottom();
 
-    const [answers, mems, core] = await Promise.all([getAll('answers'), getAll('memories'), kvGet('coreProfile', '')]);
+    const [answers, mems, core, style, samples] = await Promise.all([getAll('answers'), getAll('memories'), kvGet('coreProfile', ''), kvGet('styleProfile', ''), kvGet('styleSamples', [])]);
     const userMsgs = chat.messages.filter((m) => m.role === 'user');
     const last = userMsgs.at(-1).content;
     const query = last + (last.length < 25 && userMsgs.length > 1 ? ' ' + userMsgs.at(-2).content : '');
@@ -191,7 +192,7 @@ export async function renderChat(root, { id }, ctx) {
       ...mems.map((m) => ({ text: m.text })),
     ];
     const used = rank(query, pool).map((r) => r.it.text);
-    const system = buildSystem({ name: s.userName, core, retrieved: used });
+    const system = buildSystem({ name: s.userName, core, style, samples, retrieved: used });
     const history = chat.messages.filter((m) => !m.error).slice(-HISTORY).map(({ role, content }) => ({ role, content }));
 
     const ai = { role: 'assistant', content: '', used, ts: Date.now() };
@@ -240,7 +241,10 @@ export async function renderChat(root, { id }, ctx) {
     }
     if (err) ai.error = err;
     el.replaceWith(aiBubble(ai, { retry: true }));
-    if (!err) memorize(s, mems);
+    if (!err) {
+      memorize(s, mems);
+      learnStyle(s).then((ok) => ok && toast('อัปเดตสไตล์การพูดของเราแล้ว')).catch(() => { /* วิเคราะห์พลาดไม่เป็นไร รอบหน้าลองใหม่ */ });
+    }
   }
 
   function onSubmit(viaKey) {
