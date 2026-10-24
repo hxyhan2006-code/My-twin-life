@@ -109,7 +109,7 @@ export async function renderSettings(root, _p, ctx) {
       ctx.refreshDrawer();
     } catch (err) { toast(err.message || 'อ่านไฟล์ไม่ได้', 4000); }
   } });
-  page.append(fileInput, h('p', { class: 'hint' }, `Twin v${APP_VERSION}`));
+  page.append(fileInput, h('p', { class: 'hint' }, `Han v${APP_VERSION}`));
 }
 
 const pill = (spent, budget) => h('span', { class: `usd ${levelOf(spent, budget)}` }, `${fmtUsd(spent)} / ${fmtUsd(budget)}`);
