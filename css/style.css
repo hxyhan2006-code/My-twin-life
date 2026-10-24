@@ -160,7 +160,8 @@ a.row:active, .nav:active { background: var(--pill); }
 .popmenu .grow { flex: 1; min-width: 0; }
 .popmenu small { display: block; color: var(--dim); font-size: 0.812em; line-height: 1.35; }
 .popmenu .tick { width: 22px; flex: none; display: inline-flex; }
-.picker { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; border: 0; background: var(--pill); border-radius: 22px; padding: 8px 8px 8px 16px; font-weight: 600; }
+.picker { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; border: 0; background: none; border-radius: 22px; padding: 8px 8px 8px 4px; font-weight: 600; }
+.picker:active { background: var(--pill); }
 .picker.deep { color: #aebcff; }
 .picker .ico { opacity: .7; }
 .popmenu .danger { color: var(--danger); }
