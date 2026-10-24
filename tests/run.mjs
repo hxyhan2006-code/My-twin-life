@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { rank, grams } from '../js/retrieve.js';
 import { buildSystem, extractJson } from '../js/prompt.js';
+import { dateKey, checkinsForPrompt, describeEntry } from '../js/checkin.js';
 import { mdToHtml } from '../js/md.js';
 import { BASE_QUESTIONS, CATEGORIES, GROUPS, groupOfCat } from '../js/questions.js';
 import { createTypewriter } from '../js/typewriter.js';
@@ -62,6 +63,36 @@ t('buildSystem ใส่สไตล์การพูดและตัวอ�
   assert.ok(s.includes('ลงท้ายด้วย นะ บ่อย') && s.includes('- เออ ก็ได้ / นะ'));
   const none = buildSystem({ name: 'Han' });
   assert.ok(!none.includes('เรียนรู้จากที่เขาพิมพ์จริง') && !none.includes('ตัวอย่างข้อความจริง'));
+});
+
+t('เช็กอิน: คีย์วันเป็นเวลาท้องถิ่น (ไม่เลื่อนวันตาม UTC) และสรุปเฉพาะ 7 วันล่าสุดที่มีข้อมูล', () => {
+  assert.equal(dateKey(new Date(2026, 9, 25, 0, 5)), '2026-10-25');
+  assert.equal(dateKey(new Date(2026, 0, 3, 23, 59)), '2026-01-03');
+  const now = new Date(2026, 9, 25, 3, 0);
+  const map = {
+    '2026-10-25': { wake: '09:30', work: 'h1_2', workNote: 'ตัดคลิป', body: false, note: 'ตื่นสาย' },
+    '2026-10-23': { wake: '06:00', work: 'h3p', body: true },
+    '2026-10-10': { wake: '05:00' }, // เกิน 7 วัน ต้องไม่ถูกส่ง
+  };
+  const lines = checkinsForPrompt(map, now);
+  assert.equal(lines.length, 3);
+  assert.ok(lines[0].includes('2 จาก 7') && lines[0].includes('ไม่รู้'));
+  assert.ok(lines[1].includes('ตื่น 06:00') && lines[1].includes('3 ชม.ขึ้นไป') && lines[1].includes('ออกกำลังกาย: ทำ'));
+  assert.ok(lines[2].includes('ตื่น 09:30') && lines[2].includes('ตัดคลิป') && lines[2].includes('ออกกำลังกาย: ไม่ทำ'));
+  assert.ok(!lines.join('').includes('05:00'));
+  assert.deepEqual(checkinsForPrompt({}, now), []);
+  assert.deepEqual(checkinsForPrompt(null, now), []);
+  assert.equal(describeEntry({}), '');
+  assert.ok(describeEntry({ note: 'ก'.repeat(500) }).length < 150);
+});
+
+t('buildSystem ใส่เช็กอินเมื่อมี (ทั้งสองโหมด) และไม่ขึ้นหัวข้อเมื่อไม่มี', () => {
+  const c = ['เช็กอิน 1 จาก 7', 'อา.: ตื่น 09:30'];
+  for (const persona of ['self', 'assistant']) {
+    const s = buildSystem({ name: 'Han', persona, checkins: c });
+    assert.ok(s.includes('เช็กอินรายวันของ Han') && s.includes('ตื่น 09:30') && s.includes('ห้ามเดาเรื่องวันที่ไม่ได้เช็กอิน'));
+    assert.ok(!buildSystem({ name: 'Han', persona }).includes('เช็กอินรายวัน'));
+  }
 });
 
 t('buildSystem โหมดผู้ช่วย: พูดเป็นคนนอก เทียบคำพูดกับข้อมูล ไม่เลียนแบบ ไม่ใส่ตัวอย่างข้อความ', () => {

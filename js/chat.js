@@ -8,6 +8,7 @@ import { mdToHtml } from './md.js';
 import { extractMemories } from './profile.js';
 import { learnStyle } from './style.js';
 import { loadGoals, goalsForPrompt } from './goals.js';
+import { loadCheckins, checkinsForPrompt, dateKey } from './checkin.js';
 import { financeText } from './vaultet.js';
 import { loadInstructions, instructionsForPrompt } from './instructions.js';
 import { createTypewriter } from './typewriter.js';
@@ -144,7 +145,7 @@ export async function renderChat(root, { id }, ctx) {
 
   async function showEmpty() {
     const s = await getSettings();
-    const [answers, mems, lastBackup] = await Promise.all([getAll('answers'), getAll('memories'), kvGet('lastBackupAt', 0)]);
+    const [answers, mems, lastBackup, checkins] = await Promise.all([getAll('answers'), getAll('memories'), kvGet('lastBackupAt', 0), loadCheckins()]);
     const box = h('div', { class: 'empty' });
     const warn = needsSetup(s);
     if (warn) box.append(h('a', { class: 'banner', href: '#/settings' }, `${warn} — แตะเพื่อไปตั้งค่า`));
@@ -152,6 +153,7 @@ export async function renderChat(root, { id }, ctx) {
     if (answers.length + mems.length > 0 && Date.now() - lastBackup > 7 * 864e5) {
       box.append(h('a', { class: 'banner warn', href: '#/settings' }, 'ยังไม่ได้สำรองข้อมูลเกิน 7 วัน (ล้างเบราว์เซอร์แล้วข้อมูลหาย) — แตะเพื่อสำรอง'));
     }
+    if (!checkins[dateKey()]) box.append(h('a', { class: 'banner', href: '#/brain/checkin' }, 'วันนี้ยังไม่ได้เช็กอิน (3 คำถามสั้นๆ) — แตะเพื่อตอบ'));
     box.append(h('h2', {}, 'เริ่มจากไหนดี'));
     for (const [icon, text] of STARTERS) {
       box.append(h('button', { class: 'starter', onclick: () => { input.value = text + ' '; input.focus(); composer.autosize(); } }, iconEl(icon, 'ico lead sm'), text));
@@ -213,7 +215,7 @@ export async function renderChat(root, { id }, ctx) {
     setHeader();
     toBottom();
 
-    const [answers, mems, core, style, samples, goals, finance, instr] = await Promise.all([getAll('answers'), getAll('memories'), kvGet('coreProfile', ''), kvGet('styleProfile', ''), kvGet('styleSamples', []), loadGoals(), financeText(), loadInstructions()]);
+    const [answers, mems, core, style, samples, goals, checkins, finance, instr] = await Promise.all([getAll('answers'), getAll('memories'), kvGet('coreProfile', ''), kvGet('styleProfile', ''), kvGet('styleSamples', []), loadGoals(), loadCheckins(), financeText(), loadInstructions()]);
     const userMsgs = chat.messages.filter((m) => m.role === 'user');
     const last = userMsgs.at(-1).content;
     const query = last + (last.length < 25 && userMsgs.length > 1 ? ' ' + userMsgs.at(-2).content : '');
@@ -223,7 +225,7 @@ export async function renderChat(root, { id }, ctx) {
     ];
     const used = rank(query, pool).map((r) => r.it.text);
     const isDeep = deep;
-    const system = buildSystem({ name: s.userName, persona: chat.persona, core, style, samples, retrieved: used, goals: goalsForPrompt(goals), finance, instructions: instructionsForPrompt(instr), deep: isDeep });
+    const system = buildSystem({ name: s.userName, persona: chat.persona, core, style, samples, retrieved: used, goals: goalsForPrompt(goals), checkins: checkinsForPrompt(checkins), finance, instructions: instructionsForPrompt(instr), deep: isDeep });
     const history = chat.messages.filter((m) => !m.error).slice(-HISTORY).map(({ role, content }) => ({ role, content }));
 
     const ai = { role: 'assistant', content: '', used, ts: Date.now() };

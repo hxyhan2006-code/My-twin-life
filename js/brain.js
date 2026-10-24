@@ -8,6 +8,7 @@ import { answerRow, memoryRow } from './rows.js';
 import { h, toast, iconEl } from './ui.js';
 import { learnStyle, STYLE_EVERY } from './style.js';
 import { renderGoals } from './goals.js';
+import { renderCheckin } from './checkin.js';
 import { renderVaultet } from './vaultet.js';
 import { renderInstructions } from './instructions.js';
 import { renderProfileEdit } from './avatar.js';
@@ -17,6 +18,7 @@ export async function renderBrain(root, { id }, ctx) {
   if (id === 'chatmem') return renderChatMemories(root, ctx);
   if (id === 'style') return renderStyle(root, ctx);
   if (id === 'goals') return renderGoals(root, ctx);
+  if (id === 'checkin') return renderCheckin(root, ctx);
   if (id === 'vaultet') return renderVaultet(root, ctx);
   if (id === 'instr') return renderInstructions(root, ctx);
   if (id === 'profile') return renderProfileEdit(root, ctx);

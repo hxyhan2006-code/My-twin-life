@@ -6,7 +6,7 @@ export const PERSONAS = {
   assistant: { label: 'ผู้ช่วย', sub: 'คนนอกที่รู้จักเรา ค้านตรงๆ ช่วยวางแผน' },
 };
 
-export function buildSystem({ name = 'Han', persona = 'self', core = '', style = '', samples = [], retrieved = [], goals = [], finance = '', instructions = [], deep = false, now = new Date() }) {
+export function buildSystem({ name = 'Han', persona = 'self', core = '', style = '', samples = [], retrieved = [], goals = [], checkins = [], finance = '', instructions = [], deep = false, now = new Date() }) {
   const date = now.toLocaleString('th-TH', { dateStyle: 'full', timeStyle: 'short' });
   const asst = persona === 'assistant';
   const parts = [];
@@ -83,6 +83,12 @@ export function buildSystem({ name = 'Han', persona = 'self', core = '', style =
       `## เป้าหมายที่ ${name} ตั้งไว้ (ยังทำอยู่)\n${goals.map((g) => `- ${g}`).join('\n')}\n` +
         `ใช้ตอนวางแผนหรือตัดสินใจ: เทียบกับเป้าหมายเหล่านี้ และบอกตรงๆ ถ้าสิ่งที่กำลังจะทำเบี่ยงจากหรือขัดกับเป้าหมาย ห้ามเอาเป้าหมายมาพูดซ้ำทุกข้อความ ` +
         `ถ้าเรื่องที่คุยเกี่ยวกับเป้าหมายที่มี [ไม่ได้อัปเดต] ให้ถามความคืบหน้าสั้นๆ ได้หนึ่งครั้ง`,
+    );
+  }
+  if (checkins.length) {
+    parts.push(
+      `## เช็กอินรายวันของ ${name} (สิ่งที่ทำจริง ที่เขาบันทึกเอง)\n${checkins.map((c) => `- ${c}`).join('\n')}\n` +
+        `ใช้เทียบกับสิ่งที่เขาพูดหรือวางแผน ถ้าขัดกัน (เช่น บอกว่าจะตื่นเช้าแต่เช็กอินว่าตื่นสาย) ให้ชี้ตรงๆ พร้อมยกวันและตัวเลข ห้ามเดาเรื่องวันที่ไม่ได้เช็กอิน ห้ามเอามาพูดซ้ำทุกข้อความถ้าไม่เกี่ยวกับเรื่องที่คุย`,
     );
   }
   if (retrieved.length) {
