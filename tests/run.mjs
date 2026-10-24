@@ -86,6 +86,8 @@ t('เป้าหมาย: ส่งเฉพาะที่ active + กร�
 t('การเงินจาก Vaultet: จัดข้อความครบ เตือนเมื่อข้อมูลเก่า ไม่มีข้อมูลก็ไม่ใส่ และ buildSystem ใส่ให้', () => {
   const now = 10 * 864e5;
   const snap = { v: 1, at: now - 4 * 864e5, data: {
+    totals: { assets: 23583, stock: 146, netWorthValue: -101832 },
+    emergencyFund: { recommendedEmergencyFund: 43158, targetMonths: 3, reserveCoverageMonths: 1.6291922702627553, status: 'WATCH' },
     netWorth: { totalMoneyAllAccounts: 49500, reserved: 1000, available: 48500, liabilities: 12000, receivablesOutstanding: 0, savedTotal: 0, emergencySaved: 0 },
     thisMonth: { income: 30000, expense: 500, saving: 0, netCashFlow: 29500, topExpenseCategories: [{ category: 'กิน', amount: 500 }] },
     debts: { list: [{ name: 'ผ่อนมือถือ', outstandingBalance: 12000 }] },
@@ -95,6 +97,8 @@ t('การเงินจาก Vaultet: จัดข้อความคร�
   assert.ok(text.includes('฿49,500') && text.includes('฿12,000') && text.includes('กิน ฿500'));
   assert.ok(text.includes('ผ่อนมือถือ คงเหลือ ฿12,000') && text.includes('โน้ตบุ๊ก ออมแล้ว ฿7,500/฿30,000 (25%)'));
   assert.ok(text.includes('เก่า 4 วัน'));
+  assert.ok(text.includes('มูลค่าสุทธิ -฿101,832') && text.includes('สินทรัพย์รวม ฿23,583'), 'ค่าลบต้องเป็น -฿ ไม่ใช่ ฿-');
+  assert.ok(text.includes('ครอบคลุม 1.6 เดือน') && !text.includes('1.629'), 'ปัดเศษเดือนเหลือ 1 ตำแหน่ง');
   assert.ok(!financeForPrompt({ ...snap, at: now - 864e5 }, now).includes('เก่า'));
   assert.equal(financeForPrompt(null), '');
   const s = buildSystem({ name: 'Han', finance: text });
