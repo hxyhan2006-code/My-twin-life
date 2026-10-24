@@ -7,6 +7,7 @@ import { h, iconEl } from './ui.js';
 import { loadGoals } from './goals.js';
 import { isLinked, readSnapshot } from './vaultet.js';
 import { loadInstructions } from './instructions.js';
+import { avatarEl, loadAvatar } from './avatar.js';
 
 const row = (href, icon, title, sub) =>
   h('a', { class: 'row', href },
@@ -22,6 +23,7 @@ export async function renderMe(root, _p, ctx) {
   for (const a of answers) count[groupOfCat(a.category)]++;
   for (const m of mems) count[groupById(m.group) ? m.group : 'other']++;
 
+  const av = await loadAvatar();
   const activeGoals = (await loadGoals()).filter((g) => g.status === 'active').length;
   const activeInstr = (await loadInstructions()).filter((i) => i.on).length;
   const finLinked = await isLinked();
@@ -30,10 +32,11 @@ export async function renderMe(root, _p, ctx) {
 
   const page = h('div', { class: 'page' });
   page.append(
-    h('div', { class: 'mehead' },
-      h('div', { class: 'avatar' }, [...s.userName][0] || 'H'),
+    h('a', { class: 'mehead', href: '#/brain/profile', title: 'แตะเพื่อแก้โปรไฟล์' },
+      avatarEl(s.userName, av),
       h('div', { class: 'mename' }, s.userName),
-      h('small', {}, `ตอบสัมภาษณ์ ${answers.length}/${BASE_QUESTIONS.length}+ ข้อ · ความจำ ${mems.length} เรื่อง`)),
+      h('small', {}, `ตอบสัมภาษณ์ ${answers.length}/${BASE_QUESTIONS.length}+ ข้อ · ความจำ ${mems.length} เรื่อง`),
+      h('small', { class: 'hint' }, 'แตะเพื่อเปลี่ยนรูปและชื่อ')),
     h('h3', {}, 'Twin ของฉัน'),
     h('div', { class: 'card' },
       row('#/brain/core', 'gem', 'แก่นตัวตน', 'ตัวตนหลักที่ twin อ่านทุกครั้งที่คุย'),

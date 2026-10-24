@@ -11,6 +11,7 @@ import { applyFontSize } from './state.js';
 import { setUsageSink } from './api.js';
 import { recordUsage } from './usage.js';
 import { APP_VERSION } from './version.js';
+import { avatarEl, loadAvatar } from './avatar.js';
 
 const top = document.getElementById('top');
 const view = document.getElementById('view');
@@ -46,7 +47,7 @@ const ctx = {
 };
 
 async function refreshDrawer() {
-  const [chats, userName] = await Promise.all([listChats(), kvGet('userName', 'Han')]);
+  const [chats, userName, av] = await Promise.all([listChats(), kvGet('userName', 'Han'), loadAvatar()]);
   const cur = location.hash.match(/^#\/chat\/(.+)/)?.[1];
   drawer.innerHTML = '';
   drawer.append(
@@ -63,7 +64,7 @@ async function refreshDrawer() {
         } }, iconEl('trash'))))
       : h('small', { class: 'hint' }, 'ยังไม่มีแชต')),
     h('a', { class: 'dprofile', href: '#/me', onclick: () => openDrawer(false) },
-      h('div', { class: 'avatar sm' }, [...userName][0] || 'H'),
+      avatarEl(userName, av, 'sm'),
       h('span', { class: 'grow' }, h('b', {}, userName), h('small', {}, 'สมองของ Twin · ตั้งค่า')),
       iconEl('chevron')),
   );

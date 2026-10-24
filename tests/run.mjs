@@ -11,6 +11,7 @@ import { normalizeMemories } from '../js/profile.js';
 import { goalsForPrompt } from '../js/goals.js';
 import { financeForPrompt } from '../js/vaultet.js';
 import { instructionsForPrompt } from '../js/instructions.js';
+import { squareCrop } from '../js/avatar.js';
 import { collectWriting, clampTexts, pickSamples } from '../js/style.js';
 
 let n = 0;
@@ -113,6 +114,12 @@ t('คำสั่งถึง twin: ส่งเฉพาะข้อที่�
   const s = buildSystem({ name: 'Han', instructions: ['ตอบสั้นๆ'] });
   assert.ok(s.includes('- ตอบสั้นๆ') && s.includes('ไม่ปิดกฎข้อ 6'));
   assert.ok(!buildSystem({ name: 'Han', instructions: [] }).includes('คำสั่งที่ Han ตั้งไว้'));
+});
+
+t('รูปโปรไฟล์: ครอปตรงกลางเป็นสี่เหลี่ยมจัตุรัสทั้งรูปแนวนอน/แนวตั้ง/จัตุรัส', () => {
+  assert.deepEqual(squareCrop(400, 200), { sx: 100, sy: 0, s: 200 });
+  assert.deepEqual(squareCrop(200, 500), { sx: 0, sy: 150, s: 200 });
+  assert.deepEqual(squareCrop(300, 300), { sx: 0, sy: 0, s: 300 });
 });
 
 t('collectWriting รวมข้อความของเราจากแชต+คำตอบสัมภาษณ์ เรียงเวลา ไม่เอาของ AI', () => {
