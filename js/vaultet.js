@@ -32,7 +32,7 @@ export function financeForPrompt(snap, now = Date.now()) {
   const lines = [
     days >= STALE_DAYS ? `(ข้อมูลนี้เก่า ${days} วัน ยอดอาจไม่ตรงปัจจุบัน ให้บอกด้วยเมื่อใช้ตัวเลข และแนะนำให้เปิด Vaultet เพื่ออัปเดต)` : '',
     `ยอดเงินรวมทุกบัญชี ${baht(nw.totalMoneyAllAccounts)} · กันไว้ ${baht(nw.reserved)} · ใช้ได้จริง ${baht(nw.available)} · หนี้รวม ${baht(nw.liabilities)} · เงินที่คนอื่นยืมไป ${baht(nw.receivablesOutstanding)} · เงินออมสะสม ${baht(nw.savedTotal)} · เงินฉุกเฉิน ${baht(nw.emergencySaved)}`,
-    d.totals && `สินทรัพย์รวม ${baht(d.totals.assets)} (ในบัญชี + เงินสำรอง/ออม + พอร์ตหุ้น ${baht(d.totals.stock)}) · มูลค่าสุทธิ ${baht(d.totals.netWorthValue)} (สินทรัพย์รวม + เงินที่คนอื่นยืมไป − หนี้ ตรงกับที่ Vaultet โชว์)`,
+    d.totals && `สินทรัพย์รวม ${baht(d.totals.assets)} (ในบัญชี + เงินสำรอง/ออม + พอร์ตหุ้น ${baht(d.totals.stock)}) · มูลค่าสุทธิ ${baht(d.totals.netWorthValue)} (สินทรัพย์รวม + เงินที่คนอื่นยืมไป − หนี้)`,
     month('เดือนนี้', d.thisMonth),
     month('เดือนก่อน', d.lastMonth),
     f && `คาดการณ์สิ้นเดือน (เหลือ ${f.daysRemaining} วัน): ต้องจ่ายอีก ${baht(f.upcomingPayments)} เงินใช้ได้หลังจ่ายแล้ว ${baht(f.forecastAvailable)}`,
