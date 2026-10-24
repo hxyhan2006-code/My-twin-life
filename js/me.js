@@ -5,6 +5,7 @@ import { GROUPS, BASE_QUESTIONS, groupById, groupOfCat } from './questions.js';
 import { getSettings } from './state.js';
 import { h, iconEl } from './ui.js';
 import { loadGoals } from './goals.js';
+import { isLinked, readSnapshot } from './vaultet.js';
 
 const row = (href, icon, title, sub) =>
   h('a', { class: 'row', href },
@@ -21,6 +22,8 @@ export async function renderMe(root, _p, ctx) {
   for (const m of mems) count[groupById(m.group) ? m.group : 'other']++;
 
   const activeGoals = (await loadGoals()).filter((g) => g.status === 'active').length;
+  const finLinked = await isLinked();
+  const finSnap = readSnapshot();
   const unchecked = mems.filter((m) => m.source === 'chat' && !m.reviewed).length;
 
   const page = h('div', { class: 'page' });
@@ -33,6 +36,7 @@ export async function renderMe(root, _p, ctx) {
     h('div', { class: 'card' },
       row('#/brain/core', 'gem', 'แก่นตัวตน', 'ตัวตนหลักที่ twin อ่านทุกครั้งที่คุย'),
       row('#/brain/goals', 'flag', 'เป้าหมายและแผน', activeGoals ? `กำลังทำ ${activeGoals} เรื่อง` : 'บอก twin ว่าเราอยากไปทางไหน'),
+      row('#/brain/vaultet', 'wallet', 'การเงินจาก Vaultet', finLinked && finSnap ? 'เชื่อมแล้ว twin เห็นภาพการเงินของเรา' : finLinked ? 'ยังไม่พบข้อมูลจาก Vaultet' : 'ปิดอยู่'),
       row('#/brain/style', 'chat', 'สไตล์การพูดของเรา', 'AI เรียนรู้วิธีพูดและวิธีคิดจากที่เราพิมพ์จริง'),
       row('#/interview', 'askchat', 'สัมภาษณ์', 'ตอบคำถามเพื่อให้ twin รู้จักเรามากขึ้น'),
       row('#/brain/chatmem', 'check', 'ตรวจที่จำจากแชต', unchecked ? `รอตรวจ ${unchecked} เรื่อง` : 'ดูว่า AI จดอะไรจากที่เราคุย')),

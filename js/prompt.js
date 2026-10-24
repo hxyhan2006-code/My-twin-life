@@ -1,6 +1,6 @@
 // สร้างคำสั่งหลัก (system prompt) ให้ twin พูดเป็น "เรา" ที่ฉลาดกว่า
 
-export function buildSystem({ name = 'Han', core = '', style = '', samples = [], retrieved = [], goals = [], deep = false, now = new Date() }) {
+export function buildSystem({ name = 'Han', core = '', style = '', samples = [], retrieved = [], goals = [], finance = '', deep = false, now = new Date() }) {
   const date = now.toLocaleString('th-TH', { dateStyle: 'full', timeStyle: 'short' });
   const parts = [];
   parts.push(
@@ -39,6 +39,13 @@ export function buildSystem({ name = 'Han', core = '', style = '', samples = [],
   }
   if (samples.length) {
     parts.push(`## ตัวอย่างข้อความจริงที่ ${name} พิมพ์ (ดูน้ำเสียง ไม่ต้องก๊อปประโยค)\n${samples.map((x) => `- ${x.replace(/\n+/g, ' / ')}`).join('\n')}`);
+  }
+  if (finance.trim()) {
+    parts.push(
+      `## ภาพการเงินของ ${name} (จากแอพ Vaultet ที่เขาบันทึกเอง)\n${finance.trim()}\n` +
+        `ใช้ตอนคุยเรื่องเงิน การวางแผน หรือการตัดสินใจที่กระทบเงิน ใช้ตัวเลขตามนี้ ห้ามเดาตัวเลขที่ไม่มี และบอกตรงๆ ถ้าแผนที่เขาคิดจะทำให้เงินตึงหรือเบี่ยงจากเป้าหมาย ` +
+        `ห้ามเอาตัวเลขเงินมาพูดในเรื่องที่ไม่เกี่ยวกับเงิน`,
+    );
   }
   if (goals.length) {
     parts.push(

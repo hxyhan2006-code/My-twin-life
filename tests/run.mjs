@@ -9,6 +9,7 @@ import { buildInterviewerSystem, parseInterviewerReply } from '../js/interviewer
 import { summarize, addToDays, levelOf, costOf, fmtUsd, fmtThb, dayKey } from '../js/usage.js';
 import { normalizeMemories } from '../js/profile.js';
 import { goalsForPrompt } from '../js/goals.js';
+import { financeForPrompt } from '../js/vaultet.js';
 import { collectWriting, clampTexts, pickSamples } from '../js/style.js';
 
 let n = 0;
@@ -80,6 +81,25 @@ t('เป้าหมาย: ส่งเฉพาะที่ active + กร�
   const s = buildSystem({ name: 'Han', goals: lines });
   assert.ok(s.includes('เก็บเงิน 1 แสน') && s.includes('ห้ามเอาเป้าหมายมาพูดซ้ำ'));
   assert.ok(!buildSystem({ name: 'Han' }).includes('เป้าหมายที่'));
+});
+
+t('การเงินจาก Vaultet: จัดข้อความครบ เตือนเมื่อข้อมูลเก่า ไม่มีข้อมูลก็ไม่ใส่ และ buildSystem ใส่ให้', () => {
+  const now = 10 * 864e5;
+  const snap = { v: 1, at: now - 4 * 864e5, data: {
+    netWorth: { totalMoneyAllAccounts: 49500, reserved: 1000, available: 48500, liabilities: 12000, receivablesOutstanding: 0, savedTotal: 0, emergencySaved: 0 },
+    thisMonth: { income: 30000, expense: 500, saving: 0, netCashFlow: 29500, topExpenseCategories: [{ category: 'กิน', amount: 500 }] },
+    debts: { list: [{ name: 'ผ่อนมือถือ', outstandingBalance: 12000 }] },
+    goals: [{ name: 'โน้ตบุ๊ก', saved: 7500, targetAmount: 30000, progressPct: 25, deadline: '2027-06-01' }],
+  } };
+  const text = financeForPrompt(snap, now);
+  assert.ok(text.includes('฿49,500') && text.includes('฿12,000') && text.includes('กิน ฿500'));
+  assert.ok(text.includes('ผ่อนมือถือ คงเหลือ ฿12,000') && text.includes('โน้ตบุ๊ก ออมแล้ว ฿7,500/฿30,000 (25%)'));
+  assert.ok(text.includes('เก่า 4 วัน'));
+  assert.ok(!financeForPrompt({ ...snap, at: now - 864e5 }, now).includes('เก่า'));
+  assert.equal(financeForPrompt(null), '');
+  const s = buildSystem({ name: 'Han', finance: text });
+  assert.ok(s.includes('จากแอพ Vaultet') && s.includes('ห้ามเดาตัวเลข'));
+  assert.ok(!buildSystem({ name: 'Han' }).includes('Vaultet'));
 });
 
 t('collectWriting รวมข้อความของเราจากแชต+คำตอบสัมภาษณ์ เรียงเวลา ไม่เอาของ AI', () => {
