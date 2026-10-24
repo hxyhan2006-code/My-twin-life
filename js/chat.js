@@ -1,9 +1,9 @@
 // หน้าแชตกับ twin
 
-import { getAll, getOne, put, del, kvGet, uid } from './db.js';
+import { getAll, getOne, put, del, kvGet, kvSet, uid } from './db.js';
 import { chatStream } from './api.js';
 import { rank } from './retrieve.js';
-import { buildSystem } from './prompt.js';
+import { buildSystem, PERSONAS } from './prompt.js';
 import { mdToHtml } from './md.js';
 import { extractMemories } from './profile.js';
 import { learnStyle } from './style.js';
@@ -31,7 +31,11 @@ export async function renderChat(root, { id }, ctx) {
 
   const list = h('div', { class: 'msgs' });
   let deep = false; // โหมดคิดลึก: กลับเป็นปกติทุกครั้งที่เปิดหน้าแชต จะได้ไม่เปลืองโดยไม่รู้ตัว
-  const composer = createComposer({ placeholder: 'พิมพ์คุยกับตัวเอง…', onSubmit: (viaKey) => onSubmit(viaKey) });
+  // ใครตอบ: แชตเก่าที่ไม่มีค่านี้ = 'self' (สร้างตอนยังมีแค่โหมดตัวเอง) · แชตใหม่ = โหมดที่เลือกล่าสุด (ครั้งแรก = ผู้ช่วย)
+  if (!PERSONAS[chat.persona]) chat.persona = chat.isNew ? await kvGet('persona', 'assistant') : 'self';
+  if (!PERSONAS[chat.persona]) chat.persona = 'assistant';
+  const placeholderFor = (p) => (p === 'self' ? 'พิมพ์คุยกับตัวเอง…' : 'พิมพ์คุยกับผู้ช่วย…');
+  const composer = createComposer({ placeholder: placeholderFor(chat.persona), onSubmit: (viaKey) => onSubmit(viaKey) });
   const { input } = composer;
   const toEnd = h('button', { class: 'toend', title: 'ไปล่างสุด', hidden: true, onclick: () => toBottom(true) }, iconEl('down'));
   root.append(h('div', { class: 'msgwrap' }, list, toEnd), composer.el);
@@ -49,7 +53,18 @@ export async function renderChat(root, { id }, ctx) {
     const s = await getSettings();
     const same = !s.deepModel || s.deepModel === s.model;
     const set = (on) => () => { deep = on; setHeader(); };
+    const setPersona = (p) => async () => {
+      chat.persona = p;
+      input.placeholder = placeholderFor(p);
+      await kvSet('persona', p);
+      if (!chat.isNew) await put('chats', chat);
+      setHeader();
+    };
     popMenu(anchor, [
+      { header: 'ใครตอบ' },
+      ...Object.entries(PERSONAS).map(([k, p]) => ({ label: p.label, sub: p.sub, checked: chat.persona === k, onClick: setPersona(k) })),
+      { divider: true },
+      { header: 'ระดับการคิด' },
       { label: 'ปกติ', sub: 'เร็ว ประหยัด สำหรับคุยทั่วไป', checked: !deep, onClick: set(false) },
       { label: 'คิดลึก', sub: same ? 'คิดละเอียดกว่า ตอบช้ากว่า (ตั้งโมเดลที่เก่งกว่าได้ในตั้งค่า)' : 'โมเดลเก่งกว่า คิดละเอียด ตอบช้าและแพงกว่า ใช้กับเรื่องสำคัญ', checked: deep, onClick: set(true) },
     ], { align: 'left' });
@@ -57,7 +72,7 @@ export async function renderChat(root, { id }, ctx) {
 
   // ---------- แถบบน ----------
   function setHeader() {
-    ctx.setTitle(h('button', { class: `picker${deep ? ' deep' : ''}`, title: 'เลือกโหมดการตอบ', onclick: (e) => pickMode(e.currentTarget) }, deep ? 'คิดลึก' : 'ปกติ', iconEl('caret')));
+    ctx.setTitle(h('button', { class: `picker${deep ? ' deep' : ''}`, title: 'เลือกโหมดการตอบ', onclick: (e) => pickMode(e.currentTarget) }, PERSONAS[chat.persona].label, deep && h('small', {}, ' คิดลึก'), iconEl('caret')));
     const more = h('button', { class: 'round flat', title: 'เพิ่มเติม', onclick: () => popMenu(more, [
       { label: 'เปลี่ยนชื่อแชต', icon: 'pencil', onClick: async () => {
         const t = prompt('ชื่อแชต', chat.title);
@@ -208,7 +223,7 @@ export async function renderChat(root, { id }, ctx) {
     ];
     const used = rank(query, pool).map((r) => r.it.text);
     const isDeep = deep;
-    const system = buildSystem({ name: s.userName, core, style, samples, retrieved: used, goals: goalsForPrompt(goals), finance, instructions: instructionsForPrompt(instr), deep: isDeep });
+    const system = buildSystem({ name: s.userName, persona: chat.persona, core, style, samples, retrieved: used, goals: goalsForPrompt(goals), finance, instructions: instructionsForPrompt(instr), deep: isDeep });
     const history = chat.messages.filter((m) => !m.error).slice(-HISTORY).map(({ role, content }) => ({ role, content }));
 
     const ai = { role: 'assistant', content: '', used, ts: Date.now() };

@@ -84,6 +84,7 @@ export async function renderSettings(root, _p, ctx) {
     h('h3', {}, 'สำรองข้อมูล'),
     h('div', { class: 'card pad' },
       h('p', { class: 'hint' }, 'ข้อมูลทั้งหมดอยู่ในมือถือเครื่องนี้ ถ้าล้างข้อมูลเบราว์เซอร์/เปลี่ยนเครื่อง จะหาย ควรสำรองบ่อยๆ ไฟล์สำรอง "ไม่มี" API key แต่มีเรื่องส่วนตัวของเรา เก็บให้ดี และห้ามเอาขึ้น GitHub'),
+      persistLine(),
       h('div', { class: 'btns' },
         h('button', { class: 'btn primary', onclick: doExport }, 'ดาวน์โหลดไฟล์สำรอง'),
         h('button', { class: 'btn ghost', onclick: () => fileInput.click() }, 'นำเข้าจากไฟล์')),
@@ -149,4 +150,18 @@ async function doExport() {
   a.remove();
   await kvSet('lastBackupAt', Date.now());
   toast('ดาวน์โหลดไฟล์สำรองแล้ว (ดูในโฟลเดอร์ดาวน์โหลด)', 4000);
+}
+
+// บอกว่าเบราว์เซอร์ยอม "เก็บถาวร" ให้แล้วหรือยัง (ถ้ายัง = เครื่องอาจลบข้อมูลเองตอนที่เก็บเต็ม)
+function persistLine() {
+  const line = h('p', { class: 'hint' }, 'กำลังเช็กการเก็บถาวร…');
+  const st = navigator.storage;
+  if (!st?.persisted) { line.textContent = 'เบราว์เซอร์นี้ไม่บอกสถานะการเก็บถาวร สำรองไฟล์ไว้เสมอ'; return line; }
+  st.persisted().then(async (ok) => {
+    if (!ok && st.persist) ok = await st.persist().catch(() => false);
+    line.textContent = ok
+      ? '✓ เก็บถาวรแล้ว: เครื่องจะไม่ลบข้อมูลเองตอนที่เก็บเต็ม (แต่ล้างเบราว์เซอร์/เปลี่ยนเครื่องยังหาย)'
+      : '⚠ เบราว์เซอร์ยังไม่ยอมเก็บถาวร เครื่องอาจลบข้อมูลเองตอนที่เก็บเต็ม · ลอง "เพิ่มลงหน้าจอหลัก" แล้วเปิดจากไอคอน และสำรองบ่อยๆ';
+  }).catch(() => { line.textContent = 'เช็กการเก็บถาวรไม่ได้ สำรองไฟล์ไว้เสมอ'; });
+  return line;
 }

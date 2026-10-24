@@ -95,7 +95,9 @@ export function popMenu(anchor, items, { align = 'right' } = {}) {
   document.querySelector('.popscrim')?.remove();
   const scrim = h('div', { class: 'popscrim' });
   const close = () => scrim.remove();
-  const menu = h('div', { class: 'popmenu' }, items.map((it) =>
+  // it.header = หัวข้อกลุ่ม (กดไม่ได้) · it.divider = เส้นคั่น
+  const menu = h('div', { class: 'popmenu' }, items.filter(Boolean).map((it) =>
+    it.divider ? h('hr', {}) : it.header ? h('div', { class: 'mhead' }, it.header) :
     h('button', { class: it.danger ? 'danger' : '', onclick: () => { close(); it.onClick(); } },
       it.icon && iconEl(it.icon),
       it.checked !== undefined && h('span', { class: 'tick' }, it.checked && iconEl('check')),

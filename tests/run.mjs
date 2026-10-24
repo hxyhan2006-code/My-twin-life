@@ -64,6 +64,17 @@ t('buildSystem ใส่สไตล์การพูดและตัวอ�
   assert.ok(!none.includes('เรียนรู้จากที่เขาพิมพ์จริง') && !none.includes('ตัวอย่างข้อความจริง'));
 });
 
+t('buildSystem โหมดผู้ช่วย: พูดเป็นคนนอก เทียบคำพูดกับข้อมูล ไม่เลียนแบบ ไม่ใส่ตัวอย่างข้อความ', () => {
+  const a = buildSystem({ name: 'Han', persona: 'assistant', style: 'ลงท้ายด้วย นะ', samples: ['เออ ก็ได้'] });
+  assert.ok(a.includes('ผู้ช่วยส่วนตัว') && a.includes('ไม่ใช่ตัว Han เอง'));
+  assert.ok(a.includes('เทียบคำพูดกับข้อมูลจริง') && a.includes('ห้ามประจบ') && a.includes('ห้ามแต่งความทรงจำ'));
+  assert.ok(a.includes('ไม่ต้องพูดตาม') && !a.includes('เออ ก็ได้'));
+  assert.ok(a.includes('ใส่ใจจริงจัง'));
+  const self = buildSystem({ name: 'Han', samples: ['เออ ก็ได้'] });
+  assert.ok(self.includes('Han ตัวจริง') && self.includes('เออ ก็ได้') && !self.includes('ผู้ช่วยส่วนตัว'));
+  assert.ok(!buildSystem({ name: 'Han', persona: 'assistant', deep: true }).includes('ยังพูดเป็นเสียงของ'));
+});
+
 t('buildSystem โหมดคิดลึก: มีกฎโต้แย้งก่อนเห็นด้วย เฉพาะตอนเปิด', () => {
   assert.ok(buildSystem({ name: 'Han', deep: true }).includes('ห้ามเออออ'));
   assert.ok(!buildSystem({ name: 'Han' }).includes('โหมดคิดลึก'));
