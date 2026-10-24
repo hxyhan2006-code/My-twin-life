@@ -1,7 +1,9 @@
 // หน้าตั้งค่า: key · โมเดล · สำรอง/นำเข้า · ลบทั้งหมด
 
 import { kvGet, kvSet, exportAll, importAll, wipeAll } from './db.js';
-import { chatOnce, listModels } from './api.js';
+import { chatOnce } from './api.js';
+import { openModelPicker } from './modelpicker.js';
+import { modelPriceLine, refreshModelsIfStale } from './models.js';
 import { getSettings, FONT_SIZES, DEFAULT_FONT, saveFontSize } from './state.js';
 import { h, toast } from './ui.js';
 import { APP_VERSION } from './version.js';
@@ -20,24 +22,26 @@ export async function renderSettings(root, _p, ctx) {
   const name = h('input', { value: s.userName, autocomplete: 'off' });
   const key = h('input', { type: 'password', value: s.apiKey, placeholder: 'sk-or-…', autocomplete: 'off', autocapitalize: 'off', spellcheck: false });
   const showKey = h('button', { class: 'link', type: 'button', onclick: () => { key.type = key.type === 'password' ? 'text' : 'password'; } }, 'แสดง/ซ่อน key');
-  const dl = h('datalist', { id: 'models' });
-  const model = h('input', { value: s.model, list: 'models', placeholder: 'เช่น provider/model-name', autocomplete: 'off', autocapitalize: 'off', spellcheck: false });
-  const deep = h('input', { value: (await kvGet('deepModel', '')) || '', list: 'models', placeholder: 'ว่างไว้ = ใช้ตัวเดียวกับโมเดลหลัก', autocomplete: 'off', autocapitalize: 'off', spellcheck: false });
-  const light = h('input', { value: (await kvGet('lightModel', '')) || '', list: 'models', placeholder: 'ว่างไว้ = ใช้ตัวเดียวกับด้านบน', autocomplete: 'off', autocapitalize: 'off', spellcheck: false });
+  // ช่องโมเดล: แตะแล้วเปิดหน้าเลือก (แนะนำ + ค้นหา + ราคา) · ช่องเป็นแบบอ่านอย่างเดียว ไม่ต้องพิมพ์ชื่อเอง
+  refreshModelsIfStale(); // โหลดราคาล่าสุดเงียบๆ ไว้คำนวณค่า AI (ไม่รอ)
+  const modelBox = (role, value, placeholder, label, note) => {
+    const input = h('input', { value, placeholder, readOnly: true, class: 'pickfield', autocomplete: 'off' });
+    const priceLine = h('small', { class: 'pr' }, '');
+    const refresh = async () => { priceLine.textContent = await modelPriceLine(input.value, role); };
+    const open = () => openModelPicker({ role, current: input.value, onPick: (id) => { input.value = id; refresh(); } });
+    input.addEventListener('click', open);
+    refresh();
+    return { input, el: h('label', { class: 'field' }, h('span', {}, label), input, priceLine, h('small', {}, note), h('button', { class: 'link', type: 'button', onclick: open }, 'แตะเพื่อเลือกโมเดล')) };
+  };
+  const mainBox = modelBox('main', s.model, 'แตะเพื่อเลือก', 'โมเดลหลัก (คุยกับ twin / สัมภาษณ์ / สร้างแก่นตัวตน)', 'ตัวหลักที่ใช้เกือบทุกอย่าง · แตะเพื่อดูตัวแนะนำและราคา');
+  const deepBox = modelBox('deep', (await kvGet('deepModel', '')) || '', 'ว่างไว้ = ใช้ตัวเดียวกับโมเดลหลัก', 'โมเดลคิดลึก (ตอนเลือก "คิดลึก" ในแชต)', 'ตอบช้ากว่าและแพงกว่าปกติ ใช้เฉพาะเรื่องสำคัญ');
+  const lightBox = modelBox('light', (await kvGet('lightModel', '')) || '', 'ว่างไว้ = ใช้ตัวเดียวกับโมเดลหลัก', 'โมเดลเบา (ใช้ดึงความจำจากแชต)', 'งานเบาๆ ใช้ตัวถูกกว่าได้ ประหยัดเงิน');
+  const model = mainBox.input;
+  const deep = deepBox.input;
+  const light = lightBox.input;
 
   const callName = h('input', { value: s.callName, placeholder: `เช่น ${s.userName}`, autocomplete: 'off' });
   const selfName = h('input', { value: s.selfName, placeholder: 'เช่น เรา / ผม', autocomplete: 'off' });
-
-  const loadModels = h('button', { class: 'btn ghost', type: 'button', onclick: async () => {
-    try {
-      const list = await listModels();
-      dl.innerHTML = '';
-      for (const m of list) dl.append(h('option', { value: m.id }));
-      // เก็บราคาต่อโทเคนไว้คำนวณค่าใช้จ่าย เผื่อ OpenRouter ไม่ส่งยอดมาให้
-      await kvSet('pricing', Object.fromEntries(list.filter((m) => Number.isFinite(m.price[0]) && Number.isFinite(m.price[1])).map((m) => [m.id, m.price])));
-      toast(`โหลดรายชื่อโมเดล ${list.length} ตัว พิมพ์ค้นหาในช่องโมเดลได้`);
-    } catch (e) { toast(e.message); }
-  } }, 'โหลดรายชื่อโมเดลทั้งหมด');
 
   const save = async () => {
     await kvSet('userName', name.value.trim() || 'Han');
@@ -69,10 +73,7 @@ export async function renderSettings(root, _p, ctx) {
       showKey,
       field('ผู้สัมภาษณ์เรียกเราว่า', callName, 'ว่างไว้ = ใช้ชื่อด้านบน'),
       field('ผู้สัมภาษณ์เรียกตัวเองว่า', selfName, 'ว่างไว้ = "เรา"'),
-      field('โมเดลหลัก (คุยกับ twin / สัมภาษณ์ / สร้างแก่นตัวตน)', model, 'เลือกตัวที่ฉลาดที่สุดที่ยอมจ่ายไหว ลองสลับดูได้'),
-      field('โมเดลคิดลึก (ตอนกดปุ่ม "คิดลึก" ในแชต)', deep, 'ใส่ตัวที่เก่งที่สุดเท่าที่งบไหว ตอบช้ากว่าและแพงกว่าปกติ ใช้เฉพาะเรื่องสำคัญ'),
-      field('โมเดลเบา (ใช้ดึงความจำจากแชต)', light, 'ใช้ตัวถูกกว่าได้ ประหยัดเงิน'),
-      dl, loadModels,
+      mainBox.el, deepBox.el, lightBox.el,
       h('div', { class: 'btns' }, test, h('button', { class: 'btn primary', onclick: async () => { await save(); toast('บันทึกแล้ว'); } }, 'บันทึก')),
     ),
     h('h3', {}, 'ขนาดตัวอักษร'),
@@ -126,7 +127,7 @@ async function usageCard() {
     h('div', { class: 'row between' }, h('span', {}, 'ค่า AI วันนี้'), pill(u.day.usd, u.budgetDay)),
     h('div', { class: 'row between' }, h('span', {}, 'ค่า AI เดือนนี้ ', h('small', {}, `≈ ${fmtThb(u.month.usd, u.rate)}`)), pill(u.month.usd, u.budgetMonth)),
     h('div', { class: 'row col' },
-      h('small', {}, `วันนี้ใช้ไป ${u.day.n} ครั้ง · ${(u.day.input + u.day.output).toLocaleString('th-TH')} โทเคน${u.day.unknown || u.month.unknown ? ' · บางครั้งยังคำนวณราคาไม่ได้ (กด "โหลดรายชื่อโมเดล" ด้านล่างเพื่อให้คำนวณได้)' : ''}`),
+      h('small', {}, `วันนี้ใช้ไป ${u.day.n} ครั้ง · ${(u.day.input + u.day.output).toLocaleString('th-TH')} โทเคน${u.day.unknown || u.month.unknown ? ' · บางครั้งยังคำนวณราคาไม่ได้ (เปิดหน้านี้ใหม่หรือกดเลือกโมเดลเพื่อโหลดราคา)' : ''}`),
       h('div', { class: 'trio' },
         h('label', {}, h('small', {}, 'งบต่อวัน ($)'), bd),
         h('label', {}, h('small', {}, 'งบต่อเดือน ($)'), bm),

@@ -226,3 +226,14 @@ textarea.big { resize: none; }
 .chips.scroll .chip { max-width: 78%; white-space: normal; text-align: left; line-height: 1.35; padding: 10px 16px; }
 .round.solo { background: var(--pill); width: 46px; }
 details.used a { color: #aebcff; text-decoration: underline; }
+.sheet { position: fixed; inset: 0; z-index: 40; background: var(--bg); display: flex; flex-direction: column; }
+.sheethead { display: flex; align-items: center; gap: 12px; padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 8px; font-size: 1.05em; }
+.pick { width: 100%; background: none; border: 0; color: inherit; font: inherit; text-align: left; }
+.pick:active { background: #262626; }
+.pick .grow > span { display: block; }
+.pick small.mid { word-break: break-all; }
+.pick small.pr { color: #b7c3ff; margin-top: 2px; }
+.tagpill { display: inline-block; background: #1c2540; color: #aebcff; border-radius: 10px; padding: 0 8px; margin-left: 8px; font-size: .75em; font-weight: 400; }
+.tagpill.on { background: #1f3a2a; color: #9fe0b5; }
+input.pickfield { cursor: pointer; }
+.field small.pr { color: #b7c3ff; }

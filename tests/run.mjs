@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { rank, grams } from '../js/retrieve.js';
 import { buildSystem, extractJson } from '../js/prompt.js';
 import { extractSources } from '../js/api.js';
+import { priceOf, priceText, estimateUsd, RECOMMENDED, ROLES } from '../js/models.js';
 import { dateKey, checkinsForPrompt, describeEntry } from '../js/checkin.js';
 import { mdToHtml } from '../js/md.js';
 import { BASE_QUESTIONS, CATEGORIES, GROUPS, groupOfCat } from '../js/questions.js';
@@ -94,6 +95,25 @@ t('buildSystem ใส่เช็กอินเมื่อมี (ทั้ง
     assert.ok(s.includes('เช็กอินรายวันของ Han') && s.includes('ตื่น 09:30') && s.includes('ห้ามเดาเรื่องวันที่ไม่ได้เช็กอิน'));
     assert.ok(!buildSystem({ name: 'Han', persona }).includes('เช็กอินรายวัน'));
   }
+});
+
+t('โมเดล: ราคาจริงมาก่อนราคาอ้างอิง ไม่รู้จัก = null และข้อความราคาถูกต้อง', () => {
+  const cache = { list: [{ id: 'google/gemini-3.8-flash', name: 'x', price: [1e-6, 5e-6] }, { id: 'weird/auto', name: 'y', price: [-1, -1] }, { id: 'a/free', name: 'f', price: [0, 0] }] };
+  assert.deepEqual(priceOf('google/gemini-3.8-flash', cache), { price: [1e-6, 5e-6], live: true });
+  assert.equal(priceOf('anthropic/claude-sonnet-5.5', cache).live, false); // ไม่มีในแคช → ราคาอ้างอิง
+  assert.deepEqual(priceOf('anthropic/claude-sonnet-5.5', null).price, [2e-6, 10e-6]);
+  assert.equal(priceOf('weird/auto', cache).price, null); // ราคาติดลบ = ไม่ทราบ
+  assert.equal(priceOf('nobody/none', cache).price, null);
+  // 5000 เข้า + 1500 ออก ที่ $0.75/$3.75 ต่อล้าน = $0.009375
+  const est = estimateUsd(RECOMMENDED.main[0].price, ROLES.main.tokens);
+  assert.ok(Math.abs(est - 0.009375) < 1e-9);
+  const t1 = priceText(RECOMMENDED.main[0].price, 'main', 33);
+  assert.ok(t1.includes('$0.75 เข้า') && t1.includes('$3.75 ออก') && t1.includes('ต่อข้อความที่คุย') && t1.includes('บาท'));
+  assert.ok(priceText(RECOMMENDED.deep[1].price, 'deep', 33).includes('$20 ออก'));
+  assert.ok(priceText(RECOMMENDED.light[0].price, 'light', 33).includes('$0.3 เข้า'));
+  assert.equal(priceText(null, 'main'), 'ยังไม่รู้ราคา');
+  assert.ok(priceText([0, 0], 'main').startsWith('ฟรี'));
+  for (const role of Object.keys(ROLES)) assert.ok(RECOMMENDED[role].length >= 2 && RECOMMENDED[role].every((r) => r.id.includes('/') && r.price.length === 2));
 });
 
 t('extractSources: ดึงลิงก์จาก annotations ทั้งสองรูปแบบ ข้ามของที่ไม่ใช่ลิงก์เว็บ', () => {

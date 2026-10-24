@@ -107,5 +107,8 @@ export async function listModels() {
   const res = await fetch(`${BASE}/models`);
   if (!res.ok) throw new Error('โหลดรายชื่อโมเดลไม่ได้');
   const j = await res.json();
-  return (j.data || []).map((m) => ({ id: m.id, price: [Number(m.pricing?.prompt), Number(m.pricing?.completion)] })).sort((a, b) => a.id.localeCompare(b.id));
+  return (j.data || [])
+    .filter((m) => !m.architecture?.output_modalities || m.architecture.output_modalities.includes('text'))
+    .map((m) => ({ id: m.id, name: m.name || m.id, price: [Number(m.pricing?.prompt), Number(m.pricing?.completion)] }))
+    .sort((a, b) => a.id.localeCompare(b.id));
 }
