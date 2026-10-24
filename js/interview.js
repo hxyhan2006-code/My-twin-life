@@ -9,7 +9,7 @@ import { createTypewriter } from './typewriter.js';
 import { getSettings, needsSetup } from './state.js';
 import { guardBudget } from './usage.js';
 import { mdToHtml } from './md.js';
-import { h, toast, iconEl, popMenu, fadeTail } from './ui.js';
+import { h, toast, iconEl, popMenu, fadeTail, keepBottomOnResize } from './ui.js';
 
 async function load() {
   const [answers, memories, skipped] = await Promise.all([getAll('answers'), getAll('memories'), kvGet('skipped', [])]);
@@ -44,7 +44,7 @@ function renderCategories(root, data, ctx) {
       h('a', { class: 'row', href: `#/interview/${c.id}` },
         iconEl(c.icon, 'ico lead'),
         h('span', { class: 'grow' }, h('b', {}, c.name),
-          h('small', {}, answered ? `คุยแล้ว ${answered} ข้อ` : 'ยังไม่ได้เริ่ม'),
+          h('small', {}, !answered ? 'ยังไม่ได้เริ่ม' : answered >= total ? `คุยแล้ว ${answered} ข้อ · ครบประเด็นหลักแล้ว คุยต่อได้ถ้าอยากเล่าเพิ่ม` : `คุยแล้ว ${answered} ข้อ · เหลือประมาณ ${total - answered} ข้อ`),
           h('span', { class: 'bar' }, h('i', { style: `width:${pct}%` }))),
         iconEl('chevron')),
     );
@@ -59,6 +59,7 @@ async function renderThread(root, c, ctx) {
   const chipsEl = h('div', { class: 'chips scroll', hidden: true });
   const composer = createComposer({ placeholder: 'พิมพ์ตอบ… เล่าเป็นเรื่องได้เลย', onSubmit: () => submit(composer.input.value.trim()) });
   root.append(list, chipsEl, composer.el);
+  keepBottomOnResize(list);
 
   const s0 = await getSettings();
   const warn = needsSetup(s0);
@@ -96,7 +97,6 @@ async function renderThread(root, c, ctx) {
     if (chipsEl.hidden) return;
     for (const t of choices) chipsEl.append(h('button', { class: 'chip', onclick: () => submit(t) }, t));
     chipsEl.scrollLeft = 0;
-    requestAnimationFrame(toBottom); // พื้นที่ของรายการลดลง เลื่อนให้เห็นข้อความล่าสุดเสมอ
   }
 
   // ข้อเท็จจริงที่ AI จดจากคำตอบล่าสุด: แตะเพื่อแก้/ลบ

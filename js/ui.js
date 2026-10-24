@@ -107,6 +107,15 @@ export function popMenu(anchor, items, { align = 'right' } = {}) {
   menu.style.top = top + 'px';
 }
 
+// รายการแชตที่ถูกบีบให้เตี้ยลง (คีย์บอร์ดเด้ง / ปุ่มตัวเลือกโผล่) ถ้าก่อนหน้านั้นอ่านอยู่ท้ายสุด ให้ค้างอยู่ท้ายสุด
+// เหมือนแอพ AI ทั่วไป ข้อความล่าสุดจะไม่โดนช่องพิมพ์/คีย์บอร์ดบัง
+export function keepBottomOnResize(list, slack = 120) {
+  let atBottom = true;
+  list.addEventListener('scroll', () => { atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < slack; }, { passive: true });
+  if (typeof ResizeObserver === 'undefined') return;
+  new ResizeObserver(() => { if (atBottom) list.scrollTop = list.scrollHeight; }).observe(list);
+}
+
 // ทำให้ตัวอักษรท้ายสุดจางลงไล่ระดับ (ดูเหมือนข้อความค่อยๆ ไล่มา) ตัดตามกลุ่มตัวอักษร ไม่ตัดสระ/วรรณยุกต์ขาดจากพยัญชนะ
 export function fadeTail(root, n = 14) {
   if (typeof Intl === 'undefined' || !Intl.Segmenter) return;

@@ -10,7 +10,7 @@ import { createTypewriter } from './typewriter.js';
 import { createComposer } from './composer.js';
 import { getSettings, needsSetup } from './state.js';
 import { guardBudget } from './usage.js';
-import { h, toast, iconEl, popMenu, copyText, fadeTail } from './ui.js';
+import { h, toast, iconEl, popMenu, copyText, fadeTail, keepBottomOnResize } from './ui.js';
 
 const HISTORY = 20; // ส่งข้อความล่าสุดกี่ข้อความให้ AI
 const MEMORIZE_EVERY = 4; // ทุกกี่ข้อความของเรา ให้ AI ดึงความจำใหม่
@@ -36,6 +36,7 @@ export async function renderChat(root, { id }, ctx) {
 
   const nearBottom = () => list.scrollHeight - list.scrollTop - list.clientHeight < 120;
   const toBottom = (smooth = false) => list.scrollTo({ top: list.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
+  keepBottomOnResize(list);
   list.addEventListener('scroll', () => { toEnd.hidden = list.scrollHeight - list.scrollTop - list.clientHeight < 300; }, { passive: true });
 
   // ---------- แถบบน ----------
